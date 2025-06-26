@@ -25,7 +25,8 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getUsers, addLead, getCustomFields, getPipelineStages } from "@/lib/data"
+import { getUsers, addLead, getCustomFields, getPipelineStages, addNote, addHistoryItem } from "@/lib/data"
+import { summarizeLead } from '@/ai/flows/summarize-lead-flow'
 import type { Lead, User, CustomFieldDefinition, CustomFieldType, PipelineStage, NewLeadPayload, LeadStage } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { Separator } from "./ui/separator"
@@ -171,6 +172,27 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
             description: `${newLead.name} has been successfully added.`,
         })
         setOpen(false)
+
+        // Trigger AI analysis in background for specific sources
+        if (newLead.source === 'Website Form') {
+            (async () => {
+                try {
+                    const insights = await summarizeLead({
+                        name: newLead.name,
+                        inquiryType: newLead.inquiryType,
+                        history: newLead.history,
+                        notes: newLead.notes,
+                        customFields: newLead.customFields
+                    });
+                    const aiNoteContent = `**AI Summary:** ${insights.summary}\n**Temperature:** ${insights.temperature}`;
+                    await addNote(newLead.id, aiNoteContent, 'user-ai');
+                    await addHistoryItem(newLead.id, 'AI analysis completed.', 'user-ai');
+                } catch (e) {
+                    console.error("Background AI workflow failed for new lead:", e);
+                }
+            })();
+        }
+
     } catch (error) {
         console.error("Failed to create lead:", error);
         toast({

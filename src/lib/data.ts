@@ -1,8 +1,7 @@
 'use server'
 
-import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule } from './types';
+import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem } from './types';
 import { subDays, formatISO, addDays } from 'date-fns';
-import { summarizeLead } from '@/ai/flows/summarize-lead-flow';
 
 // This avoids issues with hot-reloading wiping out our data in development
 declare global {
@@ -109,7 +108,6 @@ export const getLeadById = async (id: string): Promise<Lead | undefined> => {
 export const addLead = async (leadData: NewLeadPayload): Promise<Lead> => {
     const assignedUser = users.find(u => u.id === leadData.assignedToId);
     if (!assignedUser) throw new Error("Assigned user not found");
-    const aiUser = users.find(u => u.id === 'user-ai');
 
     const newLead: Lead = {
         id: `lead-${Date.now()}`, name: leadData.name, email: leadData.email, phone: leadData.phone, source: leadData.source, assignedTo: assignedUser, status: leadData.status, inquiryType: leadData.inquiryType, stage: leadData.stage, customFields: leadData.customFields, photoUrl: `https://placehold.co/100x100.png`, lastContacted: new Date().toISOString(), tags: [],
@@ -117,21 +115,10 @@ export const addLead = async (leadData: NewLeadPayload): Promise<Lead> => {
         notes: [], documents: [],
     };
 
-    if (newLead.source === 'Website Form') {
-        try {
-            const insights = await summarizeLead({ name: newLead.name, inquiryType: newLead.inquiryType, history: newLead.history, notes: newLead.notes, customFields: newLead.customFields });
-            const aiNote: Note = { id: `note-ai-${Date.now()}`, timestamp: new Date().toISOString(), user: aiUser, content: `**AI Summary:** ${insights.summary}\n**Temperature:** ${insights.temperature}` };
-            newLead.notes.push(aiNote);
-            newLead.history.push({ id: `h-ai-${Date.now()}`, timestamp: new Date().toISOString(), user: aiUser, action: 'AI analysis completed.' });
-        } catch (e) {
-            console.error("AI workflow failed for new lead:", e);
-        }
-    }
     leads.unshift(newLead);
     await mockDelay(200);
     return newLead;
 }
-
 
 export const updateLeadStatus = async (leadId: string, newStatus: string): Promise<{ success: boolean; workflowTriggered: boolean }> => {
     let workflowTriggered = false;
@@ -181,6 +168,43 @@ export const addTask = async (taskData: Omit<Task, 'id' | 'status'>): Promise<Ta
     tasks.unshift(newTask);
     await mockDelay(100);
     return newTask;
+}
+
+// --- NOTE & HISTORY FUNCTIONS ---
+export const addNote = async (leadId: string, noteContent: string, userId: string): Promise<Note> => {
+    await mockDelay(100);
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) throw new Error(`Lead with id ${leadId} not found`);
+
+    const user = users.find(u => u.id === userId);
+    if (!user) throw new Error(`User with id ${userId} not found`);
+
+    const newNote: Note = {
+        id: `note-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        user: user,
+        content: noteContent
+    };
+    lead.notes.unshift(newNote);
+    return newNote;
+}
+
+export const addHistoryItem = async (leadId: string, action: string, userId: string): Promise<HistoryItem> => {
+    await mockDelay(50);
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) throw new Error(`Lead with id ${leadId} not found`);
+
+    const user = users.find(u => u.id === userId);
+    if (!user) throw new Error(`User with id ${userId} not found`);
+
+    const newHistoryItem: HistoryItem = {
+        id: `h-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        user: user,
+        action: action
+    };
+    lead.history.unshift(newHistoryItem);
+    return newHistoryItem;
 }
 
 // --- CUSTOM FIELD FUNCTIONS ---
