@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { createPortal } from "react-dom"
 
-import { getLeads, addTask } from "@/lib/data"
+import { getLeads, addTask, updateLeadStatus } from "@/lib/data"
 import { getPipelineStages } from "@/lib/pipeline-stages"
 import type { Lead, PipelineStage, Task } from "@/lib/types"
 import { PipelineColumn } from "@/components/pipeline/pipeline-column"
@@ -57,20 +57,27 @@ export default function PipelinePage() {
         if (over && active.id !== over.id) {
             const newStatus = over.id as string;
             const leadId = active.id as string;
-            const leadToUpdate = leads.find(l => l.id === leadId);
-
-            if (leadToUpdate) {
+            
+            const originalLeads = [...leads];
+            const leadToUpdate = originalLeads.find(l => l.id === leadId);
+            
+            if (leadToUpdate && leadToUpdate.status !== newStatus) {
                  // Optimistically update the UI
-                setLeads((prevLeads) => {
-                    const leadIndex = prevLeads.findIndex(l => l.id === leadId);
-                    if (leadIndex === -1) return prevLeads;
+                setLeads((prevLeads) => prevLeads.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
 
-                    const updatedLeads = [...prevLeads];
-                    const movedLead = { ...updatedLeads[leadIndex], status: newStatus };
-                    updatedLeads[leadIndex] = movedLead;
-
-                    return updatedLeads;
-                });
+                // Update on the "backend"
+                const success = await updateLeadStatus(leadId, newStatus);
+                
+                if (!success) {
+                    // Revert if the update fails
+                    setLeads(originalLeads);
+                    toast({
+                        title: "Error",
+                        description: "Could not update lead status. Please try again.",
+                        variant: "destructive"
+                    });
+                    return;
+                }
                 
                 // --- WORKFLOW RULE ---
                 if (newStatus === 'Appointment Scheduled') {

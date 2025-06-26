@@ -8,7 +8,7 @@ const users: User[] = [
   { id: 'user-4', name: 'Sam Taylor', avatarUrl: 'https://placehold.co/100x100/E8F5D9/4F4F4F.png', role: 'Counselor' },
 ];
 
-const leads: Lead[] = [
+let leads: Lead[] = [
   {
     id: 'lead-1',
     name: 'John Doe',
@@ -103,14 +103,31 @@ const leads: Lead[] = [
     stage: 'Procedure Booked',
     lastContacted: formatISO(subDays(new Date(), 10)),
     inquiryType: 'General OPD',
-    tags: ['Not Interested'],
-    history: [{ id: 'h5', timestamp: formatISO(subDays(new Date(), 10)), user: users[3], action: 'Marked as "No Go". Reason: Found another clinic.' }],
+    tags: [],
+    history: [{ id: 'h5', timestamp: formatISO(subDays(new Date(), 10)), user: users[3], action: 'Converted to Patient.' }],
+    notes: [],
+    documents: [],
+  },
+   {
+    id: 'lead-6',
+    name: 'Jessica Williams',
+    photoUrl: 'https://placehold.co/100x100/FFE0B2/4F4F4F.png',
+    email: 'jess.w@example.com',
+    phone: '+1-202-555-0106',
+    source: 'IVR',
+    assignedTo: users[3],
+    status: 'Converted',
+    stage: 'Procedure Booked',
+    lastContacted: formatISO(subDays(new Date(), 15)),
+    inquiryType: 'IVF Journey',
+    tags: [],
+    history: [],
     notes: [],
     documents: [],
   },
 ];
 
-const tasks: Task[] = [
+let tasks: Task[] = [
     { id: 'task-1', lead: leads[3], title: "Follow up with Emily Davis", dueDate: formatISO(new Date()), status: 'Pending', type: 'Call'},
     { id: 'task-2', lead: leads[0], title: "Send post-consultation info", dueDate: formatISO(new Date()), status: 'Pending', type: 'Message'},
     { id: 'task-3', lead: leads[2], title: "Appointment with Dr. Reed", dueDate: formatISO(addDays(new Date(), 3)), status: 'Pending', type: 'Appointment'},
@@ -126,6 +143,15 @@ export const getLeads = async (): Promise<Lead[]> => {
 export const getLeadById = async (id: string): Promise<Lead | undefined> => {
   return new Promise(resolve => setTimeout(() => resolve(leads.find(lead => lead.id === id)), 300));
 };
+
+export const updateLeadStatus = async (leadId: string, newStatus: string): Promise<boolean> => {
+    const leadIndex = leads.findIndex(l => l.id === leadId);
+    if (leadIndex !== -1) {
+        leads[leadIndex].status = newStatus;
+        return new Promise(resolve => setTimeout(() => resolve(true), 200));
+    }
+    return new Promise(resolve => setTimeout(() => resolve(false), 200));
+}
 
 export const getUsers = async (): Promise<User[]> => {
     return new Promise(resolve => setTimeout(() => resolve(users), 100));
