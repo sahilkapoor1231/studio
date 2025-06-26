@@ -47,6 +47,7 @@ export type Lead = {
   history: HistoryItem[];
   notes: Note[];
   documents: Document[];
+  customFields?: Record<string, string>;
 };
 
 export type Task = {

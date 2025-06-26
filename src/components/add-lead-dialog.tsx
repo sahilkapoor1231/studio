@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { getUsers } from "@/lib/data"
 import type { Lead, User, LeadStatus } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
+import { Separator } from "./ui/separator"
 
 const leadSources = ['Website Form', 'Facebook Ad', 'Walk-in', 'IVR', 'WhatsApp'] as const;
 const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Appointment Scheduled', 'No Go', 'Converted'];
@@ -42,25 +43,18 @@ const formSchema = z.object({
   status: z.enum(leadStatuses),
   inquiryType: z.enum(inquiryTypes),
   photoUrl: z.string().url().optional(),
+  // Custom Fields
+  dateOfBirth: z.string().optional(),
+  spouseName: z.string().optional(),
 })
 
 type AddLeadFormValues = z.infer<typeof formSchema>
 
-export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { children: React.ReactNode, onLeadAdded: (newLead: Lead) => void, defaultStatus?: LeadStatus }) {
+export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { children: React.ReactNode, onLeadAdded?: (newLead: Lead) => void, defaultStatus?: LeadStatus }) {
   const [open, setOpen] = useState(false)
   const [users, setUsers] = useState<User[]>([])
   const { toast } = useToast()
 
-  useEffect(() => {
-    async function fetchUsers() {
-      const fetchedUsers = await getUsers()
-      setUsers(fetchedUsers.filter(u => u.role === 'Counselor' || u.role === 'Receptionist'))
-    }
-    if (open) {
-      fetchUsers()
-    }
-  }, [open])
-  
   const form = useForm<AddLeadFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -70,21 +64,30 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
       source: "Website Form",
       status: defaultStatus || "New",
       inquiryType: "General OPD",
+      dateOfBirth: "",
+      spouseName: "",
     },
   })
 
   useEffect(() => {
-    if (defaultStatus) {
-        form.reset({
-             name: "",
-             email: "",
-             phone: "",
-             source: "Website Form",
-             inquiryType: "General OPD",
-             status: defaultStatus
-            });
+    async function fetchUsers() {
+      const fetchedUsers = await getUsers()
+      setUsers(fetchedUsers.filter(u => u.role === 'Counselor' || u.role === 'Receptionist'))
     }
-  }, [defaultStatus, form]);
+    if (open) {
+      fetchUsers()
+      form.reset({
+        name: "",
+        email: "",
+        phone: "",
+        source: "Website Form",
+        status: defaultStatus || "New",
+        inquiryType: "General OPD",
+        dateOfBirth: "",
+        spouseName: "",
+      });
+    }
+  }, [open, defaultStatus, form])
 
   async function onSubmit(values: AddLeadFormValues) {
     const assignedUser = users.find(u => u.id === values.assignedToId);
@@ -92,6 +95,10 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
         toast({ title: "Error", description: "Could not find assigned user.", variant: "destructive" })
         return;
     }
+
+    const customFields: Record<string, string> = {};
+    if (values.dateOfBirth) customFields["Date of Birth"] = values.dateOfBirth;
+    if (values.spouseName) customFields["Spouse's Name"] = values.spouseName;
 
     const newLead: Lead = {
         id: `lead-${Math.random().toString(36).substr(2, 9)}`,
@@ -109,9 +116,10 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
         history: [],
         notes: [],
         documents: [],
+        customFields,
     };
     
-    onLeadAdded(newLead);
+    onLeadAdded?.(newLead);
     toast({
         title: "Lead Created",
         description: `${newLead.name} has been successfully added.`,
@@ -123,7 +131,7 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add New Lead</DialogTitle>
           <DialogDescription>
@@ -131,7 +139,7 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-6 pl-1">
             <FormField
               control={form.control}
               name="name"
@@ -211,7 +219,38 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
                     </FormItem>
                 )}
             />
-            <DialogFooter>
+            <Separator />
+            <div className="space-y-2">
+                <h4 className="text-sm font-medium">Custom Fields</h4>
+                <p className="text-xs text-muted-foreground">Add custom details for this lead.</p>
+            </div>
+             <FormField
+              control={form.control}
+              name="dateOfBirth"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date of Birth</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., 1990-01-01" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="spouseName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Spouse's Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Jane Doe" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter className="pr-1">
                 <DialogClose asChild>
                     <Button type="button" variant="secondary">Cancel</Button>
                 </DialogClose>

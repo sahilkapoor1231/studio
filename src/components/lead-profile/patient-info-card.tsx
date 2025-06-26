@@ -17,10 +17,14 @@ import {
   Phone,
   SlashCircle,
   XCircle,
-  CalendarPlus
+  CalendarPlus,
+  Info,
 } from 'lucide-react'
+import { Separator } from '../ui/separator'
 
 export function PatientInfoCard({ lead }: { lead: Lead }) {
+  const customFields = lead.customFields ? Object.entries(lead.customFields) : []
+
   return (
     <Card>
       <CardHeader className="items-center text-center">
@@ -35,7 +39,7 @@ export function PatientInfoCard({ lead }: { lead: Lead }) {
         <div className="space-y-3 text-sm">
           <div className="flex items-center gap-3">
             <Mail className="h-4 w-4 text-muted-foreground" />
-            <a href={`mailto:${lead.email}`} className="text-primary hover:underline">
+            <a href={`mailto:${lead.email}`} className="text-primary hover:underline truncate">
               {lead.email}
             </a>
           </div>
@@ -44,17 +48,17 @@ export function PatientInfoCard({ lead }: { lead: Lead }) {
             <span>{lead.phone}</span>
           </div>
           <div className="flex items-start gap-3">
-            <span className="font-medium text-muted-foreground">Source:</span>
+            <span className="font-medium text-muted-foreground shrink-0">Source:</span>
             <Badge variant="secondary">{lead.source}</Badge>
           </div>
           <div className="flex items-start gap-3">
-            <span className="font-medium text-muted-foreground">Assigned:</span>
+            <span className="font-medium text-muted-foreground shrink-0">Assigned:</span>
             <div className="flex items-center gap-2">
               <Avatar className="h-6 w-6">
                 <AvatarImage src={lead.assignedTo.avatarUrl} alt={lead.assignedTo.name} data-ai-hint="person face" />
                 <AvatarFallback>{lead.assignedTo.name.charAt(0)}</AvatarFallback>
               </Avatar>
-              <span>{lead.assignedTo.name}</span>
+              <span className="truncate">{lead.assignedTo.name}</span>
             </div>
           </div>
           {lead.tags.length > 0 && (
@@ -67,6 +71,21 @@ export function PatientInfoCard({ lead }: { lead: Lead }) {
             </div>
           )}
         </div>
+
+        {customFields.length > 0 && (
+          <>
+            <Separator className="my-4" />
+            <div className="space-y-3 text-sm">
+                <h4 className="font-medium flex items-center gap-2 text-muted-foreground"><Info className="h-4 w-4" /> Additional Details</h4>
+                {customFields.map(([label, value]) => (
+                    <div key={label} className="flex justify-between items-center">
+                        <span className="font-medium text-muted-foreground">{label}:</span>
+                        <span className="text-right">{value}</span>
+                    </div>
+                ))}
+            </div>
+          </>
+        )}
       </CardContent>
       <CardFooter className="grid grid-cols-2 gap-2">
         <Button variant="outline">

@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Download, PlusCircle, Upload } from "lucide-react"
 import { LeadTable } from "@/components/dashboard/lead-table"
@@ -5,12 +8,30 @@ import { getLeads } from "@/lib/data"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LeadFilters } from "@/components/dashboard/lead-filters"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import type { Lead } from "@/lib/types"
+import { AddLeadDialog } from "@/components/add-lead-dialog"
 
-export default async function DashboardPage() {
-  const leads = await getLeads()
-  const newLeads = leads.filter(l => l.status === 'New').length;
-  const qualifiedLeads = leads.filter(l => l.status === 'Qualified').length;
-  const convertedLeads = leads.filter(l => l.status === 'Converted').length;
+export default function DashboardPage() {
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadLeads() {
+      setIsLoading(true);
+      const initialLeads = await getLeads();
+      setLeads(initialLeads);
+      setIsLoading(false);
+    }
+    loadLeads();
+  }, [])
+
+  const handleLeadAdded = (newLead: Lead) => {
+    setLeads(prev => [newLead, ...prev]);
+  }
+
+  const newLeadsCount = leads.filter(l => l.status === 'New').length;
+  const qualifiedLeadsCount = leads.filter(l => l.status === 'Qualified').length;
+  const convertedLeadsCount = leads.filter(l => l.status === 'Converted').length;
 
   return (
     <div className="space-y-6">
@@ -28,6 +49,12 @@ export default async function DashboardPage() {
                 <Download className="mr-2 h-4 w-4" />
                 Export
             </Button>
+            <AddLeadDialog onLeadAdded={handleLeadAdded}>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Lead
+              </Button>
+            </AddLeadDialog>
         </div>
       </div>
 
@@ -46,7 +73,7 @@ export default async function DashboardPage() {
                 <CardTitle className="text-sm font-medium">New Leads</CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">+{newLeads}</div>
+                <div className="text-2xl font-bold">+{newLeadsCount}</div>
                 <p className="text-xs text-muted-foreground">In the last 7 days</p>
             </CardContent>
         </Card>
@@ -55,7 +82,7 @@ export default async function DashboardPage() {
                 <CardTitle className="text-sm font-medium">Qualified Leads</CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{qualifiedLeads}</div>
+                <div className="text-2xl font-bold">{qualifiedLeadsCount}</div>
                  <p className="text-xs text-muted-foreground">+12 since yesterday</p>
             </CardContent>
         </Card>
@@ -64,7 +91,7 @@ export default async function DashboardPage() {
                 <CardTitle className="text-sm font-medium">Converted</CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{convertedLeads}</div>
+                <div className="text-2xl font-bold">{convertedLeadsCount}</div>
                 <p className="text-xs text-muted-foreground">This month</p>
             </CardContent>
         </Card>

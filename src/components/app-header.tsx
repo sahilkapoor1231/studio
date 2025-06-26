@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Badge } from './ui/badge'
+import { AddLeadDialog } from './add-lead-dialog'
 
 export function AppHeader() {
   return (
@@ -32,10 +33,12 @@ export function AppHeader() {
             />
           </div>
         </form>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Lead
-        </Button>
+        <AddLeadDialog>
+          <Button>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Lead
+          </Button>
+        </AddLeadDialog>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative rounded-full">
