@@ -16,7 +16,7 @@ export type LeadStage = 'Initial Inquiry' | 'Consultation Done' | 'Procedure Boo
 export type HistoryItem = {
   id: string;
   timestamp: string;
-  user: User;
+  user?: User;
   action: string;
   details?: string;
 };
@@ -24,7 +24,7 @@ export type HistoryItem = {
 export type Note = {
   id: string;
   timestamp: string;
-  user: User;
+  user?: User;
   content: string;
 }
 
@@ -85,3 +85,20 @@ export type NewLeadPayload = {
     stage: LeadStage;
     customFields?: Record<string, any>;
 };
+
+// WORKFLOW TYPES
+export type WorkflowTriggerType = 'LEAD_STATUS_CHANGED';
+export type WorkflowActionType = 'CREATE_TASK';
+
+export type WorkflowRule = {
+    id: string;
+    name: string;
+    trigger: {
+        type: WorkflowTriggerType;
+        value: string; 
+    };
+    action: {
+        type: WorkflowActionType;
+        template: string;
+    };
+}

@@ -22,7 +22,7 @@ import {
   MessageSquare,
 } from 'lucide-react'
 import { Separator } from '../ui/separator'
-import { getCustomFields } from '@/lib/custom-fields'
+import { getCustomFields } from '@/lib/data'
 import { Skeleton } from '../ui/skeleton'
 
 export function PatientInfoCard({ lead }: { lead: Lead }) {

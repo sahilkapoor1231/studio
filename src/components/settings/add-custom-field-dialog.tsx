@@ -29,7 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import type { CustomFieldDefinition } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
-import { addCustomField } from "@/lib/custom-fields"
+import { addCustomField } from "@/lib/data"
 
 const fieldTypes = ['Text', 'Number', 'Date', 'Select'] as const;
 

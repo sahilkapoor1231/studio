@@ -1,17 +1,15 @@
 'use client'
 
 import { useEffect, useState } from "react"
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, DragEndEvent, DragStartEvent, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core'
 import { createPortal } from "react-dom"
 
-import { getLeads, addTask, updateLeadStatus } from "@/lib/data"
-import { getPipelineStages } from "@/lib/pipeline-stages"
-import type { Lead, PipelineStage, Task } from "@/lib/types"
+import { getLeads, updateLeadStatus, getPipelineStages } from "@/lib/data"
+import type { Lead, PipelineStage } from "@/lib/types"
 import { PipelineColumn } from "@/components/pipeline/pipeline-column"
 import { LeadCard } from "@/components/pipeline/lead-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
-import { formatISO } from "date-fns"
 
 export default function PipelinePage() {
     const [leads, setLeads] = useState<Lead[]>([]);
@@ -66,7 +64,7 @@ export default function PipelinePage() {
                 setLeads((prevLeads) => prevLeads.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
 
                 // Update on the "backend"
-                const success = await updateLeadStatus(leadId, newStatus);
+                const { success, workflowTriggered } = await updateLeadStatus(leadId, newStatus);
                 
                 if (!success) {
                     // Revert if the update fails
@@ -78,19 +76,11 @@ export default function PipelinePage() {
                     });
                     return;
                 }
-                
-                // --- WORKFLOW RULE ---
-                if (newStatus === 'Appointment Scheduled') {
-                    const appointmentTask: Omit<Task, 'id' | 'status'> = {
-                        lead: { id: leadToUpdate.id, name: leadToUpdate.name, photoUrl: leadToUpdate.photoUrl },
-                        title: `Appointment for ${leadToUpdate.name}`,
-                        dueDate: formatISO(new Date()), // Defaults to today, could be a dialog in future
-                        type: 'Appointment',
-                    };
-                    await addTask(appointmentTask);
-                    toast({
+
+                if (workflowTriggered) {
+                     toast({
                         title: "Workflow Triggered ✨",
-                        description: `Task created in Calendar for ${leadToUpdate.name}'s appointment.`
+                        description: `An automated task was created.`
                     });
                 }
             }

@@ -26,7 +26,7 @@ import {
 import { Input } from "@/components/ui/input"
 import type { PipelineStage } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
-import { addPipelineStage } from "@/lib/pipeline-stages"
+import { addPipelineStage } from "@/lib/data"
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Stage name must be at least 2 characters." }),
