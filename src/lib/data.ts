@@ -1,5 +1,8 @@
-import { User, Lead, Task } from './types';
+'use server'
+
+import { User, Lead, Task, Note, NewLeadPayload } from './types';
 import { subDays, formatISO, addDays } from 'date-fns';
+import { summarizeLead } from '@/ai/flows/summarize-lead-flow';
 
 // This avoids issues with hot-reloading wiping out our data in development
 declare global {
@@ -13,6 +16,7 @@ const initialUsers: User[] = [
   { id: 'user-2', name: 'Alex Carter', avatarUrl: 'https://placehold.co/100x100/D9E8F5/4F4F4F.png', role: 'Counselor' },
   { id: 'user-3', name: 'Mia Garcia', avatarUrl: 'https://placehold.co/100x100/F5D9E8/4F4F4F.png', role: 'Receptionist' },
   { id: 'user-4', name: 'Sam Taylor', avatarUrl: 'https://placehold.co/100x100/E8F5D9/4F4F4F.png', role: 'Counselor' },
+  { id: 'user-ai', name: 'AI Assistant', avatarUrl: 'https://placehold.co/100x100/8A2BE2/FFFFFF.png', role: 'Admin'},
 ];
 
 const initialLeads: Lead[] = [
@@ -159,6 +163,67 @@ export const getLeads = async (): Promise<Lead[]> => {
 export const getLeadById = async (id: string): Promise<Lead | undefined> => {
   return new Promise(resolve => setTimeout(() => resolve(leads.find(lead => lead.id === id)), 300));
 };
+
+export const addLead = async (leadData: NewLeadPayload): Promise<Lead> => {
+    const assignedUser = users.find(u => u.id === leadData.assignedToId);
+    if (!assignedUser) {
+        throw new Error("Assigned user not found");
+    }
+
+    const newLead: Lead = {
+        id: `lead-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        name: leadData.name,
+        email: leadData.email,
+        phone: leadData.phone,
+        source: leadData.source,
+        assignedTo: assignedUser,
+        status: leadData.status,
+        inquiryType: leadData.inquiryType,
+        stage: leadData.stage,
+        customFields: leadData.customFields,
+        photoUrl: `https://placehold.co/100x100.png`,
+        lastContacted: new Date().toISOString(),
+        tags: [],
+        history: [
+             { id: `h-${Date.now()}`, timestamp: new Date().toISOString(), user: assignedUser, action: 'Lead created.' }
+        ],
+        notes: [],
+        documents: [],
+    };
+
+    // --- WORKFLOW RULE: AUTO-ANALYZE WEBSITE LEADS ---
+    if (newLead.source === 'Website Form') {
+        try {
+            const insights = await summarizeLead({
+                name: newLead.name,
+                inquiryType: newLead.inquiryType,
+                history: newLead.history,
+                notes: newLead.notes,
+                customFields: newLead.customFields
+            });
+            const aiNote: Note = {
+                id: `note-ai-${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                user: users.find(u => u.id === 'user-ai')!,
+                content: `**AI Summary:** ${insights.summary}\n**Temperature:** ${insights.temperature}`
+            };
+            newLead.notes.push(aiNote);
+            newLead.history.push({
+                 id: `h-ai-${Date.now()}`, timestamp: new Date().toISOString(), user: users.find(u => u.id === 'user-ai')!, action: 'AI analysis completed.'
+            });
+
+        } catch (e) {
+            console.error("AI workflow failed for new lead:", e);
+            // Don't block lead creation if AI fails
+        }
+    }
+
+    leads.unshift(newLead);
+    global.leadsDb = leads;
+
+    return new Promise(resolve => setTimeout(() => resolve(newLead), 200));
+}
+
 
 export const updateLeadStatus = async (leadId: string, newStatus: string): Promise<boolean> => {
     const leadIndex = leads.findIndex(l => l.id === leadId);

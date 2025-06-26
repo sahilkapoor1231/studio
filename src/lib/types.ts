@@ -73,3 +73,15 @@ export type Task = {
   status: 'Pending' | 'Done' | 'Overdue';
   type: 'Call' | 'Message' | 'Appointment';
 };
+
+export type NewLeadPayload = {
+    name: string;
+    email: string;
+    phone: string;
+    source: LeadSource;
+    assignedToId: string;
+    status: string;
+    inquiryType: 'General OPD' | 'IVF Journey' | 'Surgery Consultation';
+    stage: LeadStage;
+    customFields?: Record<string, any>;
+};

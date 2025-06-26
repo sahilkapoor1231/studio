@@ -25,10 +25,10 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getUsers } from "@/lib/data"
+import { getUsers, addLead } from "@/lib/data"
 import { getCustomFields } from "@/lib/custom-fields"
 import { getPipelineStages } from "@/lib/pipeline-stages"
-import type { Lead, User, CustomFieldDefinition, CustomFieldType, PipelineStage } from "@/lib/types"
+import type { Lead, User, CustomFieldDefinition, CustomFieldType, PipelineStage, NewLeadPayload, LeadStage } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { Separator } from "./ui/separator"
 import { Skeleton } from "./ui/skeleton"
@@ -93,6 +93,7 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
   const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
   const [pipelineStages, setPipelineStages] = useState<PipelineStage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast()
 
   const finalSchema = useMemo(() => {
@@ -150,37 +151,38 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
   }, [open, defaultStatus, form])
 
   async function onSubmit(values: AddLeadFormValues) {
-    const assignedUser = users.find(u => u.id === values.assignedToId);
-    if (!assignedUser) {
-        toast({ title: "Error", description: "Could not find assigned user.", variant: "destructive" })
-        return;
-    }
+    setIsSubmitting(true);
+    try {
+        const leadPayload: NewLeadPayload = {
+            name: values.name,
+            email: values.email,
+            phone: values.phone,
+            source: values.source,
+            assignedToId: values.assignedToId,
+            status: values.status,
+            inquiryType: values.inquiryType,
+            stage: 'Initial Inquiry' as LeadStage,
+            customFields: values.customFields,
+        };
 
-    const newLead: Lead = {
-        id: `lead-${Math.random().toString(36).substr(2, 9)}`,
-        name: values.name,
-        email: values.email,
-        phone: values.phone,
-        source: values.source,
-        assignedTo: assignedUser,
-        status: values.status,
-        inquiryType: values.inquiryType,
-        photoUrl: `https://placehold.co/100x100.png`,
-        stage: 'Initial Inquiry',
-        lastContacted: new Date().toISOString(),
-        tags: [],
-        history: [],
-        notes: [],
-        documents: [],
-        customFields: values.customFields,
-    };
-    
-    onLeadAdded?.(newLead);
-    toast({
-        title: "Lead Created",
-        description: `${newLead.name} has been successfully added.`,
-    })
-    setOpen(false)
+        const newLead = await addLead(leadPayload);
+        
+        onLeadAdded?.(newLead);
+        toast({
+            title: "Lead Created",
+            description: `${newLead.name} has been successfully added.`,
+        })
+        setOpen(false)
+    } catch (error) {
+        console.error("Failed to create lead:", error);
+        toast({
+            title: "Error",
+            description: "Could not create lead. Please try again.",
+            variant: "destructive"
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
   const renderCustomField = (fieldDef: CustomFieldDefinition) => {
@@ -320,7 +322,9 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
                 <DialogClose asChild>
                     <Button type="button" variant="secondary">Cancel</Button>
                 </DialogClose>
-                <Button type="submit" disabled={isLoading}>Create Lead</Button>
+                <Button type="submit" disabled={isLoading || isSubmitting}>
+                    {isSubmitting ? 'Creating...' : 'Create Lead'}
+                </Button>
             </DialogFooter>
           </form>
         </Form>
