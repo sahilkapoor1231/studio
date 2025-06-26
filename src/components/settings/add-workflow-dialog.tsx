@@ -26,15 +26,24 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { PipelineStage, WorkflowRule } from "@/lib/types"
+import type { PipelineStage, WorkflowRule, WorkflowTriggerType } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { addWorkflow } from "@/lib/data"
 
 const formSchema = z.object({
   name: z.string().min(3, { message: "Workflow name must be at least 3 characters." }),
-  triggerValue: z.string({ required_error: "Please select a trigger status." }),
+  triggerType: z.custom<WorkflowTriggerType>(),
+  triggerValue: z.string().optional(),
   actionTemplate: z.string().min(3, { message: "Task title is required." }),
-})
+}).refine(data => {
+    if (data.triggerType === 'LEAD_STATUS_CHANGED') {
+        return !!data.triggerValue;
+    }
+    return true;
+}, {
+    message: "Please select a trigger status.",
+    path: ["triggerValue"],
+});
 
 type AddWorkflowFormValues = z.infer<typeof formSchema>
 
@@ -46,24 +55,30 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages }:
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      triggerType: "LEAD_STATUS_CHANGED",
       triggerValue: "",
       actionTemplate: "Follow up with {{lead.name}}",
     },
   })
 
+  const triggerType = form.watch('triggerType');
+
   async function onSubmit(values: AddWorkflowFormValues) {
     try {
-        const workflowData = {
+        const workflowData: Omit<WorkflowRule, 'id'> = {
             name: values.name,
             trigger: {
-                type: 'LEAD_STATUS_CHANGED' as const,
-                value: values.triggerValue
+                type: values.triggerType,
             },
             action: {
                 type: 'CREATE_TASK' as const,
                 template: values.actionTemplate,
             }
         }
+        if (values.triggerType === 'LEAD_STATUS_CHANGED') {
+            workflowData.trigger.value = values.triggerValue;
+        }
+
         const newWorkflow = await addWorkflow(workflowData);
         onWorkflowAdded(newWorkflow);
         toast({
@@ -109,26 +124,49 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages }:
             
             <div className="rounded-md border p-4 space-y-4">
                 <h4 className="font-semibold text-sm">Trigger</h4>
-                <p className="text-sm text-muted-foreground -mt-2">When a lead's status is updated to...</p>
-                <FormField
+                 <FormField
                     control={form.control}
-                    name="triggerValue"
+                    name="triggerType"
                     render={({ field }) => (
                         <FormItem>
+                        <FormLabel>When...</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                             <SelectTrigger>
-                                <SelectValue placeholder="Select a status" />
+                                <SelectValue placeholder="Select a trigger event" />
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                            {pipelineStages.map(stage => <SelectItem key={stage.id} value={stage.name}>{stage.name}</SelectItem>)}
+                                <SelectItem value="LEAD_CREATED">Lead is Created</SelectItem>
+                                <SelectItem value="LEAD_STATUS_CHANGED">Lead Status Changes</SelectItem>
                             </SelectContent>
                         </Select>
                         <FormMessage />
                         </FormItem>
                     )}
                 />
+                {triggerType === 'LEAD_STATUS_CHANGED' && (
+                    <FormField
+                        control={form.control}
+                        name="triggerValue"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>To status...</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a status" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    {pipelineStages.map(stage => <SelectItem key={stage.id} value={stage.name}>{stage.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
             </div>
             
             <div className="rounded-md border p-4 space-y-4">

@@ -36,7 +36,7 @@ export function PatientJourney({ lead }: { lead: Lead }) {
       <TabsContent value="notes">
         <Card>
           <CardContent className="pt-6">
-            <NotesFeed notes={lead.notes} />
+            <NotesFeed notes={lead.notes} leadId={lead.id} />
           </CardContent>
         </Card>
       </TabsContent>

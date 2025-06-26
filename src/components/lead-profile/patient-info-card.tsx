@@ -20,14 +20,20 @@ import {
   XCircle,
   Info,
   MessageSquare,
+  Loader2,
 } from 'lucide-react'
 import { Separator } from '../ui/separator'
-import { getCustomFields } from '@/lib/data'
+import { getCustomFields, updateLeadStatus } from '@/lib/data'
 import { Skeleton } from '../ui/skeleton'
+import { useRouter } from 'next/navigation'
+import { useToast } from '@/hooks/use-toast'
 
 export function PatientInfoCard({ lead }: { lead: Lead }) {
   const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDefinition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     async function loadDefs() {
@@ -45,6 +51,25 @@ export function PatientInfoCard({ lead }: { lead: Lead }) {
         value: lead.customFields?.[def.id]
     }))
     .filter(field => field.value !== undefined && field.value !== null && field.value !== '');
+
+  const handleNoGo = async () => {
+    setIsUpdating(true);
+    try {
+      await updateLeadStatus(lead.id, 'No Go');
+      toast({
+        title: "Lead Status Updated",
+        description: `${lead.name} has been marked as "No Go".`
+      });
+      router.push('/dashboard');
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update lead status.",
+        variant: "destructive"
+      });
+      setIsUpdating(false);
+    }
+  }
 
   return (
     <Card>
@@ -66,7 +91,9 @@ export function PatientInfoCard({ lead }: { lead: Lead }) {
           </div>
           <div className="flex items-center gap-3">
             <Phone className="h-4 w-4 text-muted-foreground" />
-            <span>{lead.phone}</span>
+             <a href={`tel:${lead.phone}`} className="text-primary hover:underline truncate">
+              {lead.phone}
+            </a>
           </div>
           <div className="flex items-start gap-3">
             <span className="font-medium text-muted-foreground shrink-0">Source:</span>
@@ -116,17 +143,22 @@ export function PatientInfoCard({ lead }: { lead: Lead }) {
         )}
       </CardContent>
       <CardFooter className="grid grid-cols-2 gap-2">
-        <Button variant="outline">
-          <MessageSquare className="mr-2 h-4 w-4" /> Message
+        <Button variant="outline" asChild>
+          <a href={`mailto:${lead.email}`}>
+            <MessageSquare className="mr-2 h-4 w-4" /> Message
+          </a>
         </Button>
-        <Button variant="outline">
-          <Phone className="mr-2 h-4 w-4" /> Call
+        <Button variant="outline" asChild>
+          <a href={`tel:${lead.phone}`}>
+            <Phone className="mr-2 h-4 w-4" /> Call
+          </a>
         </Button>
-        <Button>
+        <Button disabled={isUpdating}>
             <CalendarPlus className="mr-2 h-4 w-4" /> Book Appt.
         </Button>
-        <Button variant="destructive">
-          <XCircle className="mr-2 h-4 w-4" /> No Go
+        <Button variant="destructive" onClick={handleNoGo} disabled={isUpdating}>
+          {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
+          No Go
         </Button>
       </CardFooter>
     </Card>

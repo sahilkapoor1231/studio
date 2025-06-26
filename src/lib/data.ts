@@ -1,6 +1,6 @@
 'use server'
 
-import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem } from './types';
+import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType } from './types';
 import { subDays, formatISO, addDays } from 'date-fns';
 
 // This avoids issues with hot-reloading wiping out our data in development
@@ -34,6 +34,7 @@ const initialStages: PipelineStage[] = [
   { id: 'stage-3', name: 'Qualified' },
   { id: 'stage-4', name: 'Appointment Scheduled' },
   { id: 'stage-5', name: 'Converted' },
+  { id: 'stage-6', name: 'No Go' },
 ];
 
 const initialLeads: Lead[] = [
@@ -94,6 +95,31 @@ const workflows = global.workflowsDb;
 // --- MOCK DELAY ---
 const mockDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// --- WORKFLOW ENGINE ---
+const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promise<boolean> => {
+    let triggered = false;
+    
+    const matchingWorkflows = workflows.filter(w => {
+        if (w.trigger.type !== triggerType) return false;
+        if (triggerType === 'LEAD_STATUS_CHANGED' && w.trigger.value !== lead.status) return false;
+        return true;
+    });
+
+    for (const rule of matchingWorkflows) {
+        if (rule.action.type === 'CREATE_TASK') {
+            const taskTitle = rule.action.template.replace('{{lead.name}}', lead.name);
+            await addTask({
+                lead: { id: lead.id, name: lead.name, photoUrl: lead.photoUrl },
+                title: taskTitle,
+                dueDate: formatISO(addDays(new Date(), 1)),
+                type: 'Call', // Default task type for workflows
+            });
+            triggered = true;
+        }
+    }
+    return triggered;
+}
+
 // --- LEAD FUNCTIONS ---
 export const getLeads = async (): Promise<Lead[]> => {
   await mockDelay(500);
@@ -117,37 +143,25 @@ export const addLead = async (leadData: NewLeadPayload): Promise<Lead> => {
 
     leads.unshift(newLead);
     await mockDelay(200);
+
+    // Run workflows for lead creation
+    runWorkflows('LEAD_CREATED', newLead);
+
     return newLead;
 }
 
 export const updateLeadStatus = async (leadId: string, newStatus: string): Promise<{ success: boolean; workflowTriggered: boolean }> => {
-    let workflowTriggered = false;
     const leadIndex = leads.findIndex(l => l.id === leadId);
     if (leadIndex === -1) {
-        return { success: false, workflowTriggered };
+        return { success: false, workflowTriggered: false };
     }
     
     leads[leadIndex].status = newStatus;
     const lead = leads[leadIndex];
-
-    const matchingWorkflows = workflows.filter(
-        w => w.trigger.type === 'LEAD_STATUS_CHANGED' && w.trigger.value === newStatus
-    );
-
-    for (const rule of matchingWorkflows) {
-        if (rule.action.type === 'CREATE_TASK') {
-            const taskTitle = rule.action.template.replace('{{lead.name}}', lead.name);
-            await addTask({
-                lead: { id: lead.id, name: lead.name, photoUrl: lead.photoUrl },
-                title: taskTitle,
-                dueDate: formatISO(addDays(new Date(), 1)), // Set due date for next day
-                type: 'Appointment', // Default type for this action
-            });
-            workflowTriggered = true;
-        }
-    }
     
     await mockDelay(200);
+    const workflowTriggered = await runWorkflows('LEAD_STATUS_CHANGED', lead);
+    
     return { success: true, workflowTriggered };
 }
 
