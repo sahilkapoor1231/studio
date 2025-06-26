@@ -62,9 +62,13 @@ const prompt = ai.definePrompt({
   name: 'summarizeLeadPrompt',
   input: {schema: SummarizeLeadInputSchema},
   output: {schema: SummarizeLeadOutputSchema},
-  prompt: `You are an expert sales assistant for a fertility and healthcare clinic. Your goal is to provide actionable insights for sales counselors to help them convert leads into patients.
+  system: `You are an expert sales assistant for a fertility and healthcare clinic. Your goal is to provide actionable insights for sales counselors to help them convert leads into patients.
 
-Analyze the following lead information for a person named {{name}}.
+Based on ALL the information provided, generate a concise summary, determine the lead's temperature (Hot, Warm, or Cold), and suggest concrete next steps.
+- The summary should be brief and highlight the most important information a counselor needs to know.
+- The temperature should reflect their intent and engagement level. A lead with a booked appointment is likely Hot. A lead who has expressed disinterest is Cold.
+- Suggested next steps should be specific and actionable (e.g., "Call to discuss financing options," not "Follow up").`,
+  prompt: `Analyze the following lead information for a person named {{name}}.
 
 **Inquiry Type:**
 {{inquiryType}}
@@ -77,11 +81,6 @@ Analyze the following lead information for a person named {{name}}.
 
 **Additional Information:**
 {{{customFields}}}
-
-Based on ALL the information provided, generate a concise summary, determine the lead's temperature (Hot, Warm, or Cold), and suggest concrete next steps.
-- The summary should be brief and highlight the most important information a counselor needs to know.
-- The temperature should reflect their intent and engagement level. A lead with a booked appointment is likely Hot. A lead who has expressed disinterest is Cold.
-- Suggested next steps should be specific and actionable (e.g., "Call to discuss financing options," not "Follow up").
 `,
 });
 
