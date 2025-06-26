@@ -54,21 +54,21 @@ const prompt = ai.definePrompt({
   name: 'summarizeLeadPrompt',
   input: {schema: SummarizeLeadInputSchema},
   output: {schema: SummarizeLeadOutputSchema},
-  prompt: `You are an expert sales assistant for a fertility and healthcare clinic. Your goal is to provide actionable insights for sales counselors to help them convert leads into patients.
+  prompt: (input) => `You are an expert sales assistant for a fertility and healthcare clinic. Your goal is to provide actionable insights for sales counselors to help them convert leads into patients.
 
-Analyze the following lead information for a person named {{{name}}}.
+Analyze the following lead information for a person named ${input.name}.
 
 **Inquiry Type:**
-{{{inquiryType}}}
+${input.inquiryType}
 
 **Interaction History:**
-{{{history}}}
+${input.history}
 
 **Internal Notes:**
-{{{notes}}}
+${input.notes}
 
 **Additional Information:**
-{{{customFields}}}
+${input.customFields}
 
 Based on ALL the information provided, generate a concise summary, determine the lead's temperature (Hot, Warm, or Cold), and suggest concrete next steps.
 - The summary should be brief and highlight the most important information a counselor needs to know.
