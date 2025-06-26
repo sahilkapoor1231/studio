@@ -18,6 +18,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -30,13 +31,23 @@ import type { CustomFieldDefinition } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { addCustomField } from "@/lib/custom-fields"
 
-const fieldTypes = ['Text', 'Number', 'Date'] as const;
+const fieldTypes = ['Text', 'Number', 'Date', 'Select'] as const;
 
 const formSchema = z.object({
   label: z.string().min(2, { message: "Label must be at least 2 characters." }),
   type: z.enum(fieldTypes),
   required: z.boolean(),
-})
+  options: z.string().optional(),
+}).refine(data => {
+    if (data.type === 'Select') {
+        return data.options && data.options.length > 0;
+    }
+    return true;
+}, {
+    message: "Options are required for Select type.",
+    path: ["options"],
+});
+
 
 type AddFieldFormValues = z.infer<typeof formSchema>
 
@@ -50,12 +61,25 @@ export function AddCustomFieldDialog({ children, onFieldAdded }: { children: Rea
       label: "",
       type: "Text",
       required: false,
+      options: "",
     },
   })
 
+  const selectedType = form.watch("type");
+
   async function onSubmit(values: AddFieldFormValues) {
     try {
-        const newField = await addCustomField(values);
+        const fieldData: Omit<CustomFieldDefinition, 'id'> = {
+            label: values.label,
+            type: values.type,
+            required: values.required,
+        };
+
+        if (values.type === 'Select' && values.options) {
+            fieldData.options = values.options.split(',').map(opt => opt.trim());
+        }
+
+        const newField = await addCustomField(fieldData);
         onFieldAdded(newField);
         toast({
             title: "Field Added",
@@ -117,6 +141,24 @@ export function AddCustomFieldDialog({ children, onFieldAdded }: { children: Rea
                     </FormItem>
                 )}
             />
+            {selectedType === 'Select' && (
+                 <FormField
+                    control={form.control}
+                    name="options"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Options</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g., High, Medium, Low" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                            Enter comma-separated values for the dropdown.
+                        </FormDescription>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            )}
             <FormField
               control={form.control}
               name="required"

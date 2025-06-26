@@ -35,17 +35,18 @@ export type Document = {
   uploadedAt: string;
 }
 
-export type CustomFieldType = 'Text' | 'Number' | 'Date';
+export type CustomFieldType = 'Text' | 'Number' | 'Date' | 'Select';
 
 export type CustomFieldDefinition = {
     id: string;
     label: string;
     type: CustomFieldType;
     required: boolean;
+    options?: string[];
 };
 
 export type Lead = {
-  id: string;
+  id:string;
   name: string;
   photoUrl: string;
   email: string;

@@ -1,14 +1,21 @@
 import { User, Lead, Task } from './types';
 import { subDays, formatISO, addDays } from 'date-fns';
 
-const users: User[] = [
+// This avoids issues with hot-reloading wiping out our data in development
+declare global {
+  var usersDb: User[] | undefined;
+  var leadsDb: Lead[] | undefined;
+  var tasksDb: Task[] | undefined;
+}
+
+const initialUsers: User[] = [
   { id: 'user-1', name: 'Dr. Evelyn Reed', avatarUrl: 'https://placehold.co/100x100/E8E8E8/4F4F4F.png', role: 'Doctor' },
   { id: 'user-2', name: 'Alex Carter', avatarUrl: 'https://placehold.co/100x100/D9E8F5/4F4F4F.png', role: 'Counselor' },
   { id: 'user-3', name: 'Mia Garcia', avatarUrl: 'https://placehold.co/100x100/F5D9E8/4F4F4F.png', role: 'Receptionist' },
   { id: 'user-4', name: 'Sam Taylor', avatarUrl: 'https://placehold.co/100x100/E8F5D9/4F4F4F.png', role: 'Counselor' },
 ];
 
-let leads: Lead[] = [
+const initialLeads: Lead[] = [
   {
     id: 'lead-1',
     name: 'John Doe',
@@ -16,18 +23,18 @@ let leads: Lead[] = [
     email: 'john.doe@example.com',
     phone: '+1-202-555-0101',
     source: 'Website Form',
-    assignedTo: users[1],
+    assignedTo: initialUsers[1],
     status: 'Qualified',
     stage: 'Consultation Done',
     lastContacted: formatISO(subDays(new Date(), 2)),
     inquiryType: 'IVF Journey',
     tags: ['High Intent', 'Needs Follow-up'],
     history: [
-      { id: 'h1', timestamp: formatISO(subDays(new Date(), 3)), user: users[1], action: 'Initial call made.' },
-      { id: 'h2', timestamp: formatISO(subDays(new Date(), 2)), user: users[0], action: 'Consultation with Dr. Reed.' },
+      { id: 'h1', timestamp: formatISO(subDays(new Date(), 3)), user: initialUsers[1], action: 'Initial call made.' },
+      { id: 'h2', timestamp: formatISO(subDays(new Date(), 2)), user: initialUsers[0], action: 'Consultation with Dr. Reed.' },
     ],
     notes: [
-      { id: 'n1', timestamp: formatISO(subDays(new Date(), 3)), user: users[1], content: 'Patient is very interested in the IVF package. Mentioned budget constraints.' },
+      { id: 'n1', timestamp: formatISO(subDays(new Date(), 3)), user: initialUsers[1], content: 'Patient is very interested in the IVF package. Mentioned budget constraints.' },
     ],
     documents: [
         { id: 'd1', name: 'Initial Scans.pdf', url: '#', uploadedAt: formatISO(subDays(new Date(), 2)) }
@@ -44,13 +51,13 @@ let leads: Lead[] = [
     email: 'jane.smith@example.com',
     phone: '+1-202-555-0102',
     source: 'Facebook Ad',
-    assignedTo: users[3],
+    assignedTo: initialUsers[3],
     status: 'New',
     stage: 'Initial Inquiry',
     lastContacted: formatISO(subDays(new Date(), 1)),
     inquiryType: 'General OPD',
     tags: [],
-    history: [{ id: 'h3', timestamp: formatISO(subDays(new Date(), 1)), user: users[3], action: 'Lead captured.' }],
+    history: [{ id: 'h3', timestamp: formatISO(subDays(new Date(), 1)), user: initialUsers[3], action: 'Lead captured.' }],
     notes: [],
     documents: [],
   },
@@ -61,14 +68,14 @@ let leads: Lead[] = [
     email: 'michael.j@example.com',
     phone: '+1-202-555-0103',
     source: 'Walk-in',
-    assignedTo: users[2],
+    assignedTo: initialUsers[2],
     status: 'Appointment Scheduled',
     stage: 'Initial Inquiry',
     lastContacted: formatISO(subDays(new Date(), 5)),
     inquiryType: 'Surgery Consultation',
     tags: ['High Priority'],
     history: [
-      { id: 'h4', timestamp: formatISO(subDays(new Date(), 5)), user: users[2], action: 'Appointment booked for next week.' }
+      { id: 'h4', timestamp: formatISO(subDays(new Date(), 5)), user: initialUsers[2], action: 'Appointment booked for next week.' }
     ],
     notes: [],
     documents: [],
@@ -81,7 +88,7 @@ let leads: Lead[] = [
     email: 'emily.d@example.com',
     phone: '+1-202-555-0104',
     source: 'WhatsApp',
-    assignedTo: users[1],
+    assignedTo: initialUsers[1],
     status: 'Contacted',
     stage: 'Initial Inquiry',
     lastContacted: formatISO(subDays(new Date(), 1)),
@@ -98,13 +105,13 @@ let leads: Lead[] = [
     email: 'chris.b@example.com',
     phone: '+1-202-555-0105',
     source: 'Website Form',
-    assignedTo: users[3],
+    assignedTo: initialUsers[3],
     status: 'Converted',
     stage: 'Procedure Booked',
     lastContacted: formatISO(subDays(new Date(), 10)),
     inquiryType: 'General OPD',
     tags: [],
-    history: [{ id: 'h5', timestamp: formatISO(subDays(new Date(), 10)), user: users[3], action: 'Converted to Patient.' }],
+    history: [{ id: 'h5', timestamp: formatISO(subDays(new Date(), 10)), user: initialUsers[3], action: 'Converted to Patient.' }],
     notes: [],
     documents: [],
   },
@@ -115,7 +122,7 @@ let leads: Lead[] = [
     email: 'jess.w@example.com',
     phone: '+1-202-555-0106',
     source: 'IVR',
-    assignedTo: users[3],
+    assignedTo: initialUsers[3],
     status: 'Converted',
     stage: 'Procedure Booked',
     lastContacted: formatISO(subDays(new Date(), 15)),
@@ -127,17 +134,26 @@ let leads: Lead[] = [
   },
 ];
 
-let tasks: Task[] = [
-    { id: 'task-1', lead: leads[3], title: "Follow up with Emily Davis", dueDate: formatISO(new Date()), status: 'Pending', type: 'Call'},
-    { id: 'task-2', lead: leads[0], title: "Send post-consultation info", dueDate: formatISO(new Date()), status: 'Pending', type: 'Message'},
-    { id: 'task-3', lead: leads[2], title: "Appointment with Dr. Reed", dueDate: formatISO(addDays(new Date(), 3)), status: 'Pending', type: 'Appointment'},
-    { id: 'task-4', lead: leads[1], title: "Initial contact call", dueDate: formatISO(subDays(new Date(), 2)), status: 'Overdue', type: 'Call'},
-    { id: 'task-5', lead: leads[0], title: "Discuss financing options", dueDate: formatISO(addDays(new Date(), 1)), status: 'Pending', type: 'Call'},
+const initialTasks: Task[] = [
+    { id: 'task-1', lead: initialLeads[3], title: "Follow up with Emily Davis", dueDate: formatISO(new Date()), status: 'Pending', type: 'Call'},
+    { id: 'task-2', lead: initialLeads[0], title: "Send post-consultation info", dueDate: formatISO(new Date()), status: 'Pending', type: 'Message'},
+    { id: 'task-3', lead: initialLeads[2], title: "Appointment with Dr. Reed", dueDate: formatISO(addDays(new Date(), 3)), status: 'Pending', type: 'Appointment'},
+    { id: 'task-4', lead: initialLeads[1], title: "Initial contact call", dueDate: formatISO(subDays(new Date(), 2)), status: 'Overdue', type: 'Call'},
+    { id: 'task-5', lead: initialLeads[0], title: "Discuss financing options", dueDate: formatISO(addDays(new Date(), 1)), status: 'Pending', type: 'Call'},
 ];
 
 
+if (!global.usersDb) global.usersDb = [...initialUsers];
+if (!global.leadsDb) global.leadsDb = [...initialLeads];
+if (!global.tasksDb) global.tasksDb = [...initialTasks];
+
+let users = global.usersDb;
+let leads = global.leadsDb;
+let tasks = global.tasksDb;
+
+
 export const getLeads = async (): Promise<Lead[]> => {
-  return new Promise(resolve => setTimeout(() => resolve(leads), 500));
+  return new Promise(resolve => setTimeout(() => resolve([...leads]), 500));
 };
 
 export const getLeadById = async (id: string): Promise<Lead | undefined> => {
@@ -148,17 +164,18 @@ export const updateLeadStatus = async (leadId: string, newStatus: string): Promi
     const leadIndex = leads.findIndex(l => l.id === leadId);
     if (leadIndex !== -1) {
         leads[leadIndex].status = newStatus;
+        global.leadsDb = leads;
         return new Promise(resolve => setTimeout(() => resolve(true), 200));
     }
     return new Promise(resolve => setTimeout(() => resolve(false), 200));
 }
 
 export const getUsers = async (): Promise<User[]> => {
-    return new Promise(resolve => setTimeout(() => resolve(users), 100));
+    return new Promise(resolve => setTimeout(() => resolve([...users]), 100));
 }
 
 export const getTasks = async (): Promise<Task[]> => {
-    return new Promise(resolve => setTimeout(() => resolve(tasks), 100));
+    return new Promise(resolve => setTimeout(() => resolve([...tasks]), 100));
 }
 
 export const addTask = async (taskData: Omit<Task, 'id' | 'status'>): Promise<Task> => {
@@ -168,5 +185,6 @@ export const addTask = async (taskData: Omit<Task, 'id' | 'status'>): Promise<Ta
         ...taskData,
     };
     tasks.push(newTask);
+    global.tasksDb = tasks;
     return new Promise(resolve => setTimeout(() => resolve(newTask), 100));
 }

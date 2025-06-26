@@ -59,10 +59,12 @@ const generateCustomFieldsSchema = (customFields: CustomFieldDefinition[]) => {
                 fieldSchema = z.coerce.number({ invalid_type_error: "Must be a number" });
                 break;
             case 'Date':
-                 // Allow empty string, but if a value exists, it must be a valid date
                 fieldSchema = z.string().refine(val => val === '' || !isNaN(Date.parse(val)), {
                     message: "Please enter a valid date",
                 });
+                break;
+            case 'Select':
+                fieldSchema = z.string();
                 break;
             default: // Text
                 fieldSchema = z.string();
@@ -70,13 +72,10 @@ const generateCustomFieldsSchema = (customFields: CustomFieldDefinition[]) => {
         }
 
         if (field.required) {
-            if (field.type === 'Text') {
+            if (field.type === 'Text' || field.type === 'Select') {
                 fieldSchema = fieldSchema.min(1, `${field.label} is required.`);
             } else if (field.type === 'Date') {
                  fieldSchema = fieldSchema.refine(val => val !== '', `${field.label} is required.`);
-            } else { // Number
-                // For numbers, being required means it cannot be undefined/null. zod's non-optional handles this.
-                // The `coerce` will handle non-number strings. We just need to make sure it's not optional.
             }
         } else {
             fieldSchema = fieldSchema.optional();
@@ -192,6 +191,35 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
             default: return 'text';
         }
     }
+
+    if (fieldDef.type === 'Select') {
+        return (
+            <FormField
+                key={fieldDef.id}
+                control={form.control}
+                name={`customFields.${fieldDef.id}` as any}
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>{fieldDef.label}{fieldDef.required && ' *'}</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={`Select a ${fieldDef.label}`} />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {fieldDef.options?.map(option => (
+                                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+        )
+    }
+
     return (
         <FormField
             key={fieldDef.id}
