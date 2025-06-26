@@ -27,11 +27,12 @@ const menuItems = [
   { href: '/pipeline', label: 'Pipeline', icon: KanbanSquare },
   { href: '/calendar', label: 'Calendar', icon: Calendar },
   { href: '/reports', label: 'Reports', icon: BarChart },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const isActive = (path: string) => pathname === path
+  const isActive = (path: string) => pathname.startsWith(path)
 
   return (
     <>
@@ -64,27 +65,6 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="p-2">
-            <div className="rounded-lg bg-sidebar-accent p-4 text-center">
-                <h3 className="font-semibold text-sidebar-accent-foreground">Upgrade Your Plan</h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                    Get more features and remove all limits.
-                </p>
-                <Button variant="primary" size="sm" className="mt-3 w-full bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90">
-                    Upgrade Now
-                </Button>
-            </div>
-        </div>
-        
-        <SidebarMenu>
-            <SidebarMenuItem>
-                <SidebarMenuButton tooltip="Settings">
-                    <Settings />
-                    <span>Settings</span>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
-        </SidebarMenu>
-
         <div className="flex items-center gap-3 border-t p-2">
           <Avatar>
             <AvatarImage src="https://placehold.co/100x100.png" alt="Jane Doe" data-ai-hint="person face" />

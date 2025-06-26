@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -26,15 +26,18 @@ import {
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getUsers } from "@/lib/data"
-import type { Lead, User, LeadStatus } from "@/lib/types"
+import { getCustomFields } from "@/lib/custom-fields"
+import type { Lead, User, LeadStatus, CustomFieldDefinition, CustomFieldType } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { Separator } from "./ui/separator"
+import { Skeleton } from "./ui/skeleton"
 
 const leadSources = ['Website Form', 'Facebook Ad', 'Walk-in', 'IVR', 'WhatsApp'] as const;
 const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Appointment Scheduled', 'No Go', 'Converted'];
 const inquiryTypes = ['General OPD', 'IVF Journey', 'Surgery Consultation'] as const;
 
-const formSchema = z.object({
+// Base schema for standard fields
+const baseFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Invalid email address." }),
   phone: z.string().min(10, { message: "Phone number is too short." }),
@@ -43,20 +46,65 @@ const formSchema = z.object({
   status: z.enum(leadStatuses),
   inquiryType: z.enum(inquiryTypes),
   photoUrl: z.string().url().optional(),
-  // Custom Fields
-  dateOfBirth: z.string().optional(),
-  spouseName: z.string().optional(),
-})
+});
 
-type AddLeadFormValues = z.infer<typeof formSchema>
+// Function to generate the Zod schema for custom fields
+const generateCustomFieldsSchema = (customFields: CustomFieldDefinition[]) => {
+    const shape: Record<string, z.ZodTypeAny> = {};
+    customFields.forEach(field => {
+        let fieldSchema: z.ZodTypeAny;
+
+        switch (field.type) {
+            case 'Number':
+                fieldSchema = z.coerce.number({ invalid_type_error: "Must be a number" });
+                break;
+            case 'Date':
+                 // Allow empty string, but if a value exists, it must be a valid date
+                fieldSchema = z.string().refine(val => val === '' || !isNaN(Date.parse(val)), {
+                    message: "Please enter a valid date",
+                });
+                break;
+            default: // Text
+                fieldSchema = z.string();
+                break;
+        }
+
+        if (field.required) {
+            if (field.type === 'Text') {
+                fieldSchema = fieldSchema.min(1, `${field.label} is required.`);
+            } else if (field.type === 'Date') {
+                 fieldSchema = fieldSchema.refine(val => val !== '', `${field.label} is required.`);
+            } else { // Number
+                // For numbers, being required means it cannot be undefined/null. zod's non-optional handles this.
+                // The `coerce` will handle non-number strings. We just need to make sure it's not optional.
+            }
+        } else {
+            fieldSchema = fieldSchema.optional();
+        }
+        
+        shape[field.id] = fieldSchema;
+    });
+    return z.object(shape);
+};
+
 
 export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { children: React.ReactNode, onLeadAdded?: (newLead: Lead) => void, defaultStatus?: LeadStatus }) {
   const [open, setOpen] = useState(false)
   const [users, setUsers] = useState<User[]>([])
+  const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast()
 
+  const finalSchema = useMemo(() => {
+    return baseFormSchema.extend({
+      customFields: generateCustomFieldsSchema(customFields)
+    })
+  }, [customFields]);
+
+  type AddLeadFormValues = z.infer<typeof finalSchema>;
+
   const form = useForm<AddLeadFormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(finalSchema),
     defaultValues: {
       name: "",
       email: "",
@@ -64,18 +112,25 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
       source: "Website Form",
       status: defaultStatus || "New",
       inquiryType: "General OPD",
-      dateOfBirth: "",
-      spouseName: "",
+      customFields: {},
     },
   })
 
   useEffect(() => {
-    async function fetchUsers() {
-      const fetchedUsers = await getUsers()
-      setUsers(fetchedUsers.filter(u => u.role === 'Counselor' || u.role === 'Receptionist'))
-    }
-    if (open) {
-      fetchUsers()
+    async function fetchData() {
+      setIsLoading(true);
+      const [fetchedUsers, fetchedCustomFields] = await Promise.all([
+        getUsers(),
+        getCustomFields()
+      ]);
+      setUsers(fetchedUsers.filter(u => u.role === 'Counselor' || u.role === 'Receptionist'));
+      setCustomFields(fetchedCustomFields);
+      
+      const defaultCustomValues: Record<string, any> = {};
+      fetchedCustomFields.forEach(field => {
+        defaultCustomValues[field.id] = field.type === 'Number' ? undefined : '';
+      });
+
       form.reset({
         name: "",
         email: "",
@@ -83,9 +138,12 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
         source: "Website Form",
         status: defaultStatus || "New",
         inquiryType: "General OPD",
-        dateOfBirth: "",
-        spouseName: "",
+        customFields: defaultCustomValues,
       });
+      setIsLoading(false);
+    }
+    if (open) {
+      fetchData();
     }
   }, [open, defaultStatus, form])
 
@@ -95,10 +153,6 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
         toast({ title: "Error", description: "Could not find assigned user.", variant: "destructive" })
         return;
     }
-
-    const customFields: Record<string, string> = {};
-    if (values.dateOfBirth) customFields["Date of Birth"] = values.dateOfBirth;
-    if (values.spouseName) customFields["Spouse's Name"] = values.spouseName;
 
     const newLead: Lead = {
         id: `lead-${Math.random().toString(36).substr(2, 9)}`,
@@ -116,7 +170,7 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
         history: [],
         notes: [],
         documents: [],
-        customFields,
+        customFields: values.customFields,
     };
     
     onLeadAdded?.(newLead);
@@ -125,7 +179,36 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
         description: `${newLead.name} has been successfully added.`,
     })
     setOpen(false)
-    form.reset()
+  }
+
+  const renderCustomField = (fieldDef: CustomFieldDefinition) => {
+    const getInputType = (type: CustomFieldType) => {
+        switch(type) {
+            case 'Number': return 'number';
+            case 'Date': return 'date';
+            default: return 'text';
+        }
+    }
+    return (
+        <FormField
+            key={fieldDef.id}
+            control={form.control}
+            name={`customFields.${fieldDef.id}` as any}
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>{fieldDef.label}{fieldDef.required && ' *'}</FormLabel>
+                    <FormControl>
+                        <Input 
+                            type={getInputType(fieldDef.type)} 
+                            {...field} 
+                            value={field.value ?? ''}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+            )}
+        />
+    )
   }
 
   return (
@@ -140,121 +223,65 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-6 pl-1">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="John Doe" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="john.doe@example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone</FormLabel>
-                  <FormControl>
-                    <Input placeholder="+1-202-555-0101" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-                control={form.control}
-                name="source"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Source</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a source" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {leadSources.map(source => <SelectItem key={source} value={source}>{source}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="assignedToId"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Assign To</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a team member" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {users.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-            <Separator />
-            <div className="space-y-2">
-                <h4 className="text-sm font-medium">Custom Fields</h4>
-                <p className="text-xs text-muted-foreground">Add custom details for this lead.</p>
-            </div>
-             <FormField
-              control={form.control}
-              name="dateOfBirth"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date of Birth</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., 1990-01-01" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="spouseName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Spouse's Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Jane Doe" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter className="pr-1">
+            { isLoading ? (
+                <div className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                </div>
+            ) : (
+                <>
+                    <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="John Doe" {...field} /></FormControl><FormMessage /></FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                        <FormItem><FormLabel>Email</FormLabel><FormControl><Input placeholder="john.doe@example.com" {...field} /></FormControl><FormMessage /></FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                        <FormItem><FormLabel>Phone</FormLabel><FormControl><Input placeholder="+1-202-555-0101" {...field} /></FormControl><FormMessage /></FormItem>
+                    )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="source"
+                        render={({ field }) => (
+                            <FormItem><FormLabel>Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source" /></SelectTrigger></FormControl><SelectContent>{leadSources.map(source => <SelectItem key={source} value={source}>{source}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="assignedToId"
+                        render={({ field }) => (
+                            <FormItem><FormLabel>Assign To</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a team member" /></SelectTrigger></FormControl><SelectContent>{users.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                        )}
+                    />
+
+                    {customFields.length > 0 && <Separator />}
+                    {customFields.length > 0 && (
+                        <div className="space-y-2">
+                            <h4 className="text-sm font-medium">Additional Details</h4>
+                        </div>
+                    )}
+                    {customFields.map(renderCustomField)}
+                </>
+            )}
+            
+            <DialogFooter className="pr-1 sticky bottom-0 bg-background py-4">
                 <DialogClose asChild>
                     <Button type="button" variant="secondary">Cancel</Button>
                 </DialogClose>
-                <Button type="submit">Create Lead</Button>
+                <Button type="submit" disabled={isLoading}>Create Lead</Button>
             </DialogFooter>
           </form>
         </Form>

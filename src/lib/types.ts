@@ -31,6 +31,15 @@ export type Document = {
   uploadedAt: string;
 }
 
+export type CustomFieldType = 'Text' | 'Number' | 'Date';
+
+export type CustomFieldDefinition = {
+    id: string;
+    label: string;
+    type: CustomFieldType;
+    required: boolean;
+};
+
 export type Lead = {
   id: string;
   name: string;
@@ -47,7 +56,8 @@ export type Lead = {
   history: HistoryItem[];
   notes: Note[];
   documents: Document[];
-  customFields?: Record<string, string>;
+  // Key is the custom field ID, value is the user-provided value.
+  customFields?: Record<string, any>;
 };
 
 export type Task = {

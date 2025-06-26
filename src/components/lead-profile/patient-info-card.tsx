@@ -1,29 +1,50 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
+  CardDescription,
+  CardFooter,
 } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Lead } from '@/lib/types'
+import type { Lead, CustomFieldDefinition } from '@/lib/types'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import {
-  CheckCircle,
   Mail,
-  MessageSquare,
   Phone,
-  SlashCircle,
-  XCircle,
   CalendarPlus,
+  XCircle,
   Info,
+  MessageSquare,
 } from 'lucide-react'
 import { Separator } from '../ui/separator'
+import { getCustomFields } from '@/lib/custom-fields'
+import { Skeleton } from '../ui/skeleton'
 
 export function PatientInfoCard({ lead }: { lead: Lead }) {
-  const customFields = lead.customFields ? Object.entries(lead.customFields) : []
+  const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDefinition[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadDefs() {
+        setIsLoading(true);
+        const defs = await getCustomFields();
+        setCustomFieldDefs(defs);
+        setIsLoading(false);
+    }
+    loadDefs();
+  }, [])
+  
+  const populatedCustomFields = customFieldDefs
+    .map(def => ({
+        label: def.label,
+        value: lead.customFields?.[def.id]
+    }))
+    .filter(field => field.value !== undefined && field.value !== null && field.value !== '');
 
   return (
     <Card>
@@ -72,17 +93,24 @@ export function PatientInfoCard({ lead }: { lead: Lead }) {
           )}
         </div>
 
-        {customFields.length > 0 && (
+        {(isLoading || populatedCustomFields.length > 0) && (
           <>
             <Separator className="my-4" />
             <div className="space-y-3 text-sm">
                 <h4 className="font-medium flex items-center gap-2 text-muted-foreground"><Info className="h-4 w-4" /> Additional Details</h4>
-                {customFields.map(([label, value]) => (
-                    <div key={label} className="flex justify-between items-center">
-                        <span className="font-medium text-muted-foreground">{label}:</span>
-                        <span className="text-right">{value}</span>
+                {isLoading ? (
+                    <div className="space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-2/3" />
                     </div>
-                ))}
+                ) : (
+                    populatedCustomFields.map(({label, value}) => (
+                        <div key={label} className="flex justify-between items-center">
+                            <span className="font-medium text-muted-foreground">{label}:</span>
+                            <span className="text-right">{String(value)}</span>
+                        </div>
+                    ))
+                )}
             </div>
           </>
         )}

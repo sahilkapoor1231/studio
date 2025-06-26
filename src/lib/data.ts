@@ -33,8 +33,8 @@ const leads: Lead[] = [
         { id: 'd1', name: 'Initial Scans.pdf', url: '#', uploadedAt: formatISO(subDays(new Date(), 2)) }
     ],
     customFields: {
-      "Date of Birth": "1985-05-20",
-      "Spouse's Name": "Jane Doe",
+      "field_dob": "1985-05-20",
+      "field_spouse": "Jane Doe",
     }
   },
   {
@@ -72,9 +72,7 @@ const leads: Lead[] = [
     ],
     notes: [],
     documents: [],
-    customFields: {
-        "Preferred Contact Time": "After 5 PM",
-    }
+    customFields: {}
   },
   {
     id: 'lead-4',
