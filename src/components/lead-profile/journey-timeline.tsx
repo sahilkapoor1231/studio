@@ -1,8 +1,18 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { HistoryItem } from '@/lib/types'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { format, parseISO } from 'date-fns'
+import { Skeleton } from '../ui/skeleton'
 
 export function JourneyTimeline({ history }: { history: HistoryItem[] }) {
+    const [isMounted, setIsMounted] = useState(false)
+
+    useEffect(() => {
+        setIsMounted(true)
+    }, [])
+
     if (history.length === 0) {
         return <div className="text-center text-muted-foreground py-8">No history recorded yet.</div>
     }
@@ -26,7 +36,11 @@ export function JourneyTimeline({ history }: { history: HistoryItem[] }) {
               by {item.user.name}
             </p>
             <time className="text-xs text-muted-foreground">
-              {format(parseISO(item.timestamp), 'PPpp')}
+              {isMounted ? (
+                format(parseISO(item.timestamp), 'PPpp')
+              ) : (
+                <Skeleton className="h-4 w-[200px]" />
+              )}
             </time>
           </div>
         </div>
