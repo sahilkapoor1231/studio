@@ -65,12 +65,25 @@ const initialWorkflows: WorkflowRule[] = [
 ]
 
 // --- DATABASE INITIALIZATION ---
-if (!global.usersDb) global.usersDb = [...initialUsers];
-if (!global.leadsDb) global.leadsDb = [...initialLeads];
-if (!global.tasksDb) global.tasksDb = [...initialTasks];
-if (!global.customFieldsDb) global.customFieldsDb = [...initialCustomFields];
-if (!global.pipelineStagesDb) global.pipelineStagesDb = [...initialStages];
-if (!global.workflowsDb) global.workflowsDb = [...initialWorkflows];
+// Initialize in-memory DB only if it doesn't exist
+if (typeof global.usersDb === 'undefined') {
+  global.usersDb = [...initialUsers];
+}
+if (typeof global.leadsDb === 'undefined') {
+  global.leadsDb = [...initialLeads];
+}
+if (typeof global.tasksDb === 'undefined') {
+  global.tasksDb = [...initialTasks];
+}
+if (typeof global.customFieldsDb === 'undefined') {
+  global.customFieldsDb = [...initialCustomFields];
+}
+if (typeof global.pipelineStagesDb === 'undefined') {
+  global.pipelineStagesDb = [...initialStages];
+}
+if (typeof global.workflowsDb === 'undefined') {
+  global.workflowsDb = [...initialWorkflows];
+}
 
 const users = global.usersDb;
 const leads = global.leadsDb;
@@ -96,6 +109,7 @@ export const getLeadById = async (id: string): Promise<Lead | undefined> => {
 export const addLead = async (leadData: NewLeadPayload): Promise<Lead> => {
     const assignedUser = users.find(u => u.id === leadData.assignedToId);
     if (!assignedUser) throw new Error("Assigned user not found");
+    const aiUser = users.find(u => u.id === 'user-ai');
 
     const newLead: Lead = {
         id: `lead-${Date.now()}`, name: leadData.name, email: leadData.email, phone: leadData.phone, source: leadData.source, assignedTo: assignedUser, status: leadData.status, inquiryType: leadData.inquiryType, stage: leadData.stage, customFields: leadData.customFields, photoUrl: `https://placehold.co/100x100.png`, lastContacted: new Date().toISOString(), tags: [],
@@ -106,9 +120,9 @@ export const addLead = async (leadData: NewLeadPayload): Promise<Lead> => {
     if (newLead.source === 'Website Form') {
         try {
             const insights = await summarizeLead({ name: newLead.name, inquiryType: newLead.inquiryType, history: newLead.history, notes: newLead.notes, customFields: newLead.customFields });
-            const aiNote: Note = { id: `note-ai-${Date.now()}`, timestamp: new Date().toISOString(), user: users.find(u => u.id === 'user-ai'), content: `**AI Summary:** ${insights.summary}\n**Temperature:** ${insights.temperature}` };
+            const aiNote: Note = { id: `note-ai-${Date.now()}`, timestamp: new Date().toISOString(), user: aiUser, content: `**AI Summary:** ${insights.summary}\n**Temperature:** ${insights.temperature}` };
             newLead.notes.push(aiNote);
-            newLead.history.push({ id: `h-ai-${Date.now()}`, timestamp: new Date().toISOString(), user: users.find(u => u.id === 'user-ai'), action: 'AI analysis completed.' });
+            newLead.history.push({ id: `h-ai-${Date.now()}`, timestamp: new Date().toISOString(), user: aiUser, action: 'AI analysis completed.' });
         } catch (e) {
             console.error("AI workflow failed for new lead:", e);
         }
@@ -140,7 +154,7 @@ export const updateLeadStatus = async (leadId: string, newStatus: string): Promi
                 lead: { id: lead.id, name: lead.name, photoUrl: lead.photoUrl },
                 title: taskTitle,
                 dueDate: formatISO(addDays(new Date(), 1)), // Set due date for next day
-                type: 'Appointment',
+                type: 'Appointment', // Default type for this action
             });
             workflowTriggered = true;
         }

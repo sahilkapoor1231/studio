@@ -4,7 +4,7 @@
  *
  * - summarizeLead - A function that generates insights about a lead.
  * - SummarizeLeadInput - The input type for the summarizeLead function.
- * - SummarizeLeadOutput - The return type for the summarizeLead function.
+ * - SummarizeLeadOutput - The return type for the summarizeLeadOutput function.
  */
 
 import {ai} from '@/ai/genkit';
@@ -12,8 +12,12 @@ import type { HistoryItem, Note } from '@/lib/types';
 import {z} from 'genkit';
 
 // Helper to format history and notes for the prompt
-const formatHistory = (history: HistoryItem[]) => history.map(h => `${h.timestamp}: ${h.action} (by ${h.user ? h.user.name : 'System'})`).join('\n');
-const formatNotes = (notes: Note[]) => notes.map(n => `${n.timestamp}: ${n.content} (by ${n.user ? n.user.name : 'System'})`).join('\n');
+const formatHistory = (history: HistoryItem[]) => 
+    history.map(h => `${h.timestamp}: ${h.action} (by ${h.user ? h.user.name : 'System'})`).join('\n');
+
+const formatNotes = (notes: Note[]) => 
+    notes.map(n => `${n.timestamp}: ${n.content} (by ${n.user ? n.user.name : 'System'})`).join('\n');
+
 const formatCustomFields = (fields: Record<string, any>) => JSON.stringify(fields, null, 2);
 
 
@@ -43,8 +47,8 @@ export async function summarizeLead(lead: {
     const input = {
         name: lead.name,
         inquiryType: lead.inquiryType,
-        history: formatHistory(lead.history),
-        notes: formatNotes(lead.notes),
+        history: formatHistory(lead.history || []),
+        notes: formatNotes(lead.notes || []),
         customFields: formatCustomFields(lead.customFields || {}),
     };
   const {output} = await summarizeLeadFlow(input);
@@ -84,7 +88,7 @@ const summarizeLeadFlow = ai.defineFlow(
     inputSchema: SummarizeLeadInputSchema,
     outputSchema: SummarizeLeadOutputSchema,
   },
-  async input => {
+  async (input) => {
     const {output} = await prompt(input);
     return output!;
   }

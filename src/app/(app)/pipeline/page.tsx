@@ -64,23 +64,26 @@ export default function PipelinePage() {
                 setLeads((prevLeads) => prevLeads.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
 
                 // Update on the "backend"
-                const { success, workflowTriggered } = await updateLeadStatus(leadId, newStatus);
-                
-                if (!success) {
+                try {
+                    const { success, workflowTriggered } = await updateLeadStatus(leadId, newStatus);
+                    
+                    if (!success) {
+                        throw new Error("Update failed on server");
+                    }
+
+                    if (workflowTriggered) {
+                         toast({
+                            title: "Workflow Triggered ✨",
+                            description: `An automated task was created.`
+                        });
+                    }
+                } catch (error) {
                     // Revert if the update fails
                     setLeads(originalLeads);
                     toast({
                         title: "Error",
                         description: "Could not update lead status. Please try again.",
                         variant: "destructive"
-                    });
-                    return;
-                }
-
-                if (workflowTriggered) {
-                     toast({
-                        title: "Workflow Triggered ✨",
-                        description: `An automated task was created.`
                     });
                 }
             }

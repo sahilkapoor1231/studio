@@ -108,14 +108,14 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
       name: "",
       email: "",
       phone: "",
-      source: "Website Form",
-      status: defaultStatus || undefined,
-      inquiryType: "General OPD",
       customFields: {},
     },
   })
 
   useEffect(() => {
+    // Only fetch data when the dialog is opened
+    if (!open) return;
+
     async function fetchData() {
       setIsLoading(true);
       const [fetchedUsers, fetchedCustomFields, fetchedStages] = await Promise.all([
@@ -132,6 +132,7 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
         defaultCustomValues[field.id] = field.type === 'Number' ? undefined : '';
       });
 
+      // Reset the form with the latest data
       form.reset({
         name: "",
         email: "",
@@ -139,13 +140,12 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
         source: "Website Form",
         status: defaultStatus || fetchedStages[0]?.name,
         inquiryType: "General OPD",
+        assignedToId: undefined,
         customFields: defaultCustomValues,
       });
       setIsLoading(false);
     }
-    if (open) {
-      fetchData();
-    }
+    fetchData();
   }, [open, defaultStatus, form])
 
   async function onSubmit(values: AddLeadFormValues) {

@@ -43,21 +43,33 @@ export default function SettingsPage() {
     const handleWorkflowAdded = (newWorkflow: WorkflowRule) => setWorkflows(prev => [...prev, newWorkflow]);
 
     const handleDeleteField = async (fieldId: string) => {
-        await deleteCustomField(fieldId);
-        setFields(prev => prev.filter(f => f.id !== fieldId));
-        toast({ title: "Field Deleted", description: "The custom field has been removed." });
+        const { success } = await deleteCustomField(fieldId);
+        if (success) {
+            setFields(prev => prev.filter(f => f.id !== fieldId));
+            toast({ title: "Field Deleted", description: "The custom field has been removed." });
+        } else {
+             toast({ title: "Error", description: "Failed to delete field.", variant: "destructive" });
+        }
     }
     
     const handleDeleteStage = async (stageId: string) => {
-        await deletePipelineStage(stageId);
-        setStages(prev => prev.filter(s => s.id !== stageId));
-        toast({ title: "Stage Deleted", description: "The pipeline stage has been removed." });
+        const { success } = await deletePipelineStage(stageId);
+        if (success) {
+            setStages(prev => prev.filter(s => s.id !== stageId));
+            toast({ title: "Stage Deleted", description: "The pipeline stage has been removed." });
+        } else {
+            toast({ title: "Error", description: "Failed to delete stage.", variant: "destructive" });
+        }
     }
 
     const handleDeleteWorkflow = async (workflowId: string) => {
-        await deleteWorkflow(workflowId);
-        setWorkflows(prev => prev.filter(w => w.id !== workflowId));
-        toast({ title: "Workflow Deleted", description: "The automation rule has been removed." });
+        const { success } = await deleteWorkflow(workflowId);
+        if (success) {
+            setWorkflows(prev => prev.filter(w => w.id !== workflowId));
+            toast({ title: "Workflow Deleted", description: "The automation rule has been removed." });
+        } else {
+            toast({ title: "Error", description: "Failed to delete workflow.", variant: "destructive" });
+        }
     }
 
     return (
