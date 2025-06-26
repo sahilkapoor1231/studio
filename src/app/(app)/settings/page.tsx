@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Trash2 } from 'lucide-react'
+import { ArrowRight, PlusCircle, Trash2, Workflow } from 'lucide-react'
 import type { CustomFieldDefinition, PipelineStage, WorkflowRule } from '@/lib/types'
 import { getCustomFields, deleteCustomField, getWorkflows, deleteWorkflow, getPipelineStages, deletePipelineStage } from '@/lib/data'
 import { AddCustomFieldDialog } from '@/components/settings/add-custom-field-dialog'
@@ -13,7 +13,6 @@ import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AddWorkflowDialog } from '@/components/settings/add-workflow-dialog'
-import { Workflow } from 'lucide-react'
 
 export default function SettingsPage() {
     const [fields, setFields] = useState<CustomFieldDefinition[]>([]);
@@ -170,24 +169,36 @@ export default function SettingsPage() {
                             </AddWorkflowDialog>
                         </CardHeader>
                         <CardContent>
-                             <div className="rounded-md border">
+                             <div className="space-y-4">
                                 {isLoading ? (
-                                    <div className="p-4 space-y-4"><Skeleton className="h-10 w-full" /></div>
+                                    <div className="p-4 space-y-4"><Skeleton className="h-24 w-full" /></div>
                                 ) : workflows.length === 0 ? (
-                                    <div className="text-center p-8 text-muted-foreground">No workflows created yet.</div>
+                                    <div className="text-center p-8 text-muted-foreground rounded-md border">No workflows created yet.</div>
                                 ) : (
-                                    workflows.map((rule, index) => (
-                                        <div key={rule.id} className={`flex items-center justify-between p-4 ${index < workflows.length - 1 ? 'border-b' : ''}`}>
-                                            <div className="flex items-center gap-3">
-                                                <Workflow className="h-6 w-6 text-primary" />
-                                                <div>
-                                                    <p className="font-medium">{rule.name}</p>
-                                                    <div className="text-sm text-muted-foreground">When status becomes <Badge variant="secondary">{rule.trigger.value}</Badge>, then create a task.</div>
+                                    workflows.map((rule) => (
+                                        <div key={rule.id} className="rounded-lg border bg-card p-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Workflow className="h-5 w-5 text-primary" />
+                                                    <h4 className="font-semibold">{rule.name}</h4>
+                                                </div>
+                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteWorkflow(rule.id)}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" /><span className="sr-only">Delete {rule.name}</span>
+                                                </Button>
+                                            </div>
+                                            <div className="mt-4 flex items-center justify-center gap-2 sm:gap-4 text-sm text-muted-foreground">
+                                                <div className="flex-1 rounded-md border p-3 text-center bg-background">
+                                                    <p className="font-medium text-foreground">WHEN</p>
+                                                    <p className="mt-1 text-xs sm:text-sm">Lead status changes to</p>
+                                                    <Badge variant="secondary" className="mt-2">{rule.trigger.value}</Badge>
+                                                </div>
+                                                <ArrowRight className="h-6 w-6 shrink-0 text-muted-foreground" />
+                                                <div className="flex-1 rounded-md border p-3 text-center bg-background">
+                                                    <p className="font-medium text-foreground">THEN</p>
+                                                    <p className="mt-1 text-xs sm:text-sm">Create a new task</p>
+                                                    <code className="mt-2 text-xs bg-muted text-muted-foreground rounded px-2 py-1 block truncate">"{rule.action.template}"</code>
                                                 </div>
                                             </div>
-                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteWorkflow(rule.id)}>
-                                                <Trash2 className="h-4 w-4 text-destructive" /><span className="sr-only">Delete {rule.name}</span>
-                                            </Button>
                                         </div>
                                     ))
                                 )}

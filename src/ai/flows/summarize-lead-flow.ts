@@ -52,28 +52,31 @@ export async function summarizeLead(lead: {
         customFields: formatCustomFields(lead.customFields || {}),
     };
   const {output} = await summarizeLeadFlow(input);
-  return output!;
+  if (!output) {
+    throw new Error("AI failed to generate a valid summary.");
+  }
+  return output;
 }
 
 const prompt = ai.definePrompt({
   name: 'summarizeLeadPrompt',
   input: {schema: SummarizeLeadInputSchema},
   output: {schema: SummarizeLeadOutputSchema},
-  prompt: (input) => `You are an expert sales assistant for a fertility and healthcare clinic. Your goal is to provide actionable insights for sales counselors to help them convert leads into patients.
+  prompt: `You are an expert sales assistant for a fertility and healthcare clinic. Your goal is to provide actionable insights for sales counselors to help them convert leads into patients.
 
-Analyze the following lead information for a person named ${input.name}.
+Analyze the following lead information for a person named {{name}}.
 
 **Inquiry Type:**
-${input.inquiryType}
+{{inquiryType}}
 
 **Interaction History:**
-${input.history}
+{{{history}}}
 
 **Internal Notes:**
-${input.notes}
+{{{notes}}}
 
 **Additional Information:**
-${input.customFields}
+{{{customFields}}}
 
 Based on ALL the information provided, generate a concise summary, determine the lead's temperature (Hot, Warm, or Cold), and suggest concrete next steps.
 - The summary should be brief and highlight the most important information a counselor needs to know.
