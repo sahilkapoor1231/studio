@@ -51,39 +51,12 @@ export async function summarizeLead(lead: {
         notes: formatNotes(lead.notes || []),
         customFields: formatCustomFields(lead.customFields || {}),
     };
-  const {output} = await summarizeLeadFlow(input);
+  const output = await summarizeLeadFlow(input);
   if (!output) {
     throw new Error("AI failed to generate a valid summary.");
   }
   return output;
 }
-
-const prompt = ai.definePrompt({
-  name: 'summarizeLeadPrompt',
-  input: {schema: SummarizeLeadInputSchema},
-  output: {schema: SummarizeLeadOutputSchema},
-  prompt: `You are an expert sales assistant for a fertility and healthcare clinic. Your goal is to provide actionable insights for sales counselors to help them convert leads into patients.
-
-Based on ALL the information provided, generate a concise summary, determine the lead's temperature (Hot, Warm, or Cold), and suggest concrete next steps.
-- The summary should be brief and highlight the most important information a counselor needs to know.
-- The temperature should reflect their intent and engagement level. A lead with a booked appointment is likely Hot. A lead who has expressed disinterest is Cold.
-- Suggested next steps should be specific and actionable (e.g., "Call to discuss financing options," not "Follow up").
-
-Analyze the following lead information for a person named {{name}}.
-
-**Inquiry Type:**
-{{inquiryType}}
-
-**Interaction History:**
-{{{history}}}
-
-**Internal Notes:**
-{{{notes}}}
-
-**Additional Information:**
-{{{customFields}}}
-`,
-});
 
 const summarizeLeadFlow = ai.defineFlow(
   {
@@ -92,7 +65,30 @@ const summarizeLeadFlow = ai.defineFlow(
     outputSchema: SummarizeLeadOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt(input);
+    const { output } = await ai.generate({
+      prompt: `You are an expert sales assistant for a fertility and healthcare clinic. Your goal is to provide actionable insights for sales counselors to help them convert leads into patients.
+
+Based on ALL the information provided, generate a concise summary, determine the lead's temperature (Hot, Warm, or Cold), and suggest concrete next steps.
+- The summary should be brief and highlight the most important information a counselor needs to know.
+- The temperature should reflect their intent and engagement level. A lead with a booked appointment is likely Hot. A lead who has expressed disinterest is Cold.
+- Suggested next steps should be specific and actionable (e.g., "Call to discuss financing options," not "Follow up").
+
+Analyze the following lead information for a person named ${input.name}.
+
+**Inquiry Type:**
+${input.inquiryType}
+
+**Interaction History:**
+${input.history}
+
+**Internal Notes:**
+${input.notes}
+
+**Additional Information:**
+${input.customFields}
+`,
+      output: { schema: SummarizeLeadOutputSchema },
+    });
     return output!;
   }
 );
