@@ -182,7 +182,7 @@ export default function SettingsPage() {
                                                 <Workflow className="h-6 w-6 text-primary" />
                                                 <div>
                                                     <p className="font-medium">{rule.name}</p>
-                                                    <p className="text-sm text-muted-foreground">When status becomes <Badge variant="secondary">{rule.trigger.value}</Badge>, then create a task.</p>
+                                                    <div className="text-sm text-muted-foreground">When status becomes <Badge variant="secondary">{rule.trigger.value}</Badge>, then create a task.</div>
                                                 </div>
                                             </div>
                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteWorkflow(rule.id)}>
