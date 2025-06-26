@@ -134,3 +134,13 @@ export const getUsers = async (): Promise<User[]> => {
 export const getTasks = async (): Promise<Task[]> => {
     return new Promise(resolve => setTimeout(() => resolve(tasks), 100));
 }
+
+export const addTask = async (taskData: Omit<Task, 'id' | 'status'>): Promise<Task> => {
+    const newTask: Task = {
+        id: `task-${Date.now()}`,
+        status: 'Pending',
+        ...taskData,
+    };
+    tasks.push(newTask);
+    return new Promise(resolve => setTimeout(() => resolve(newTask), 100));
+}

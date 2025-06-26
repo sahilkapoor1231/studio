@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react"
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { createPortal } from "react-dom"
 
-import { getLeads } from "@/lib/data"
-import type { Lead, PipelineStage } from "@/lib/types"
+import { getLeads, addTask } from "@/lib/data"
+import { getPipelineStages } from "@/lib/pipeline-stages"
+import type { Lead, PipelineStage, Task } from "@/lib/types"
 import { PipelineColumn } from "@/components/pipeline/pipeline-column"
 import { LeadCard } from "@/components/pipeline/lead-card"
-import { createPortal } from "react-dom"
-import { getPipelineStages } from "@/lib/pipeline-stages"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useToast } from "@/hooks/use-toast"
+import { formatISO } from "date-fns"
 
 export default function PipelinePage() {
     const [leads, setLeads] = useState<Lead[]>([]);
@@ -17,6 +19,7 @@ export default function PipelinePage() {
     const [activeLead, setActiveLead] = useState<Lead | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isClient, setIsClient] = useState(false);
+    const { toast } = useToast();
 
     useEffect(() => {
         setIsClient(true);
@@ -47,21 +50,43 @@ export default function PipelinePage() {
         }
     };
 
-    function handleDragEnd(event: DragEndEvent) {
+    async function handleDragEnd(event: DragEndEvent) {
         setActiveLead(null);
         const { active, over } = event;
 
         if (over && active.id !== over.id) {
-            setLeads((prevLeads) => {
-                const leadIndex = prevLeads.findIndex(l => l.id === active.id);
-                if (leadIndex === -1) return prevLeads;
+            const newStatus = over.id as string;
+            const leadId = active.id as string;
+            const leadToUpdate = leads.find(l => l.id === leadId);
 
-                const updatedLeads = [...prevLeads];
-                const movedLead = { ...updatedLeads[leadIndex], status: over.id as string };
-                updatedLeads[leadIndex] = movedLead;
+            if (leadToUpdate) {
+                 // Optimistically update the UI
+                setLeads((prevLeads) => {
+                    const leadIndex = prevLeads.findIndex(l => l.id === leadId);
+                    if (leadIndex === -1) return prevLeads;
 
-                return updatedLeads;
-            });
+                    const updatedLeads = [...prevLeads];
+                    const movedLead = { ...updatedLeads[leadIndex], status: newStatus };
+                    updatedLeads[leadIndex] = movedLead;
+
+                    return updatedLeads;
+                });
+                
+                // --- WORKFLOW RULE ---
+                if (newStatus === 'Appointment Scheduled') {
+                    const appointmentTask: Omit<Task, 'id' | 'status'> = {
+                        lead: { id: leadToUpdate.id, name: leadToUpdate.name, photoUrl: leadToUpdate.photoUrl },
+                        title: `Appointment for ${leadToUpdate.name}`,
+                        dueDate: formatISO(new Date()), // Defaults to today, could be a dialog in future
+                        type: 'Appointment',
+                    };
+                    await addTask(appointmentTask);
+                    toast({
+                        title: "Workflow Triggered ✨",
+                        description: `Task created in Calendar for ${leadToUpdate.name}'s appointment.`
+                    });
+                }
+            }
         }
     }
 
