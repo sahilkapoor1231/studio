@@ -1,0 +1,98 @@
+import { Button } from "@/components/ui/button"
+import { Download, PlusCircle, Upload } from "lucide-react"
+import { LeadTable } from "@/components/dashboard/lead-table"
+import { getLeads } from "@/lib/data"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { LeadFilters } from "@/components/dashboard/lead-filters"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+
+export default async function DashboardPage() {
+  const leads = await getLeads()
+  const newLeads = leads.filter(l => l.status === 'New').length;
+  const qualifiedLeads = leads.filter(l => l.status === 'Qualified').length;
+  const convertedLeads = leads.filter(l => l.status === 'Converted').length;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground">Welcome back! Here's an overview of your leads.</p>
+        </div>
+        <div className="flex gap-2">
+            <Button variant="outline">
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+            </Button>
+            <Button variant="outline">
+                <Download className="mr-2 h-4 w-4" />
+                Export
+            </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{leads.length}</div>
+                <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">New Leads</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">+{newLeads}</div>
+                <p className="text-xs text-muted-foreground">In the last 7 days</p>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Qualified Leads</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{qualifiedLeads}</div>
+                 <p className="text-xs text-muted-foreground">+12 since yesterday</p>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Converted</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{convertedLeads}</div>
+                <p className="text-xs text-muted-foreground">This month</p>
+            </CardContent>
+        </Card>
+      </div>
+      
+      <Tabs defaultValue="all">
+        <div className="flex items-center justify-between">
+            <TabsList>
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="new">New</TabsTrigger>
+                <TabsTrigger value="contacted">Contacted</TabsTrigger>
+                <TabsTrigger value="qualified">Qualified</TabsTrigger>
+            </TabsList>
+            <LeadFilters />
+        </div>
+        <TabsContent value="all" className="mt-4">
+          <LeadTable leads={leads} />
+        </TabsContent>
+        <TabsContent value="new" className="mt-4">
+          <LeadTable leads={leads.filter(l => l.status === 'New')} />
+        </TabsContent>
+         <TabsContent value="contacted" className="mt-4">
+          <LeadTable leads={leads.filter(l => l.status === 'Contacted')} />
+        </TabsContent>
+         <TabsContent value="qualified" className="mt-4">
+          <LeadTable leads={leads.filter(l => l.status === 'Qualified')} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
