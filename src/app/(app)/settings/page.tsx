@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, PlusCircle, Trash2, Workflow } from 'lucide-react'
-import type { CustomFieldDefinition, PipelineStage, WorkflowRule } from '@/lib/types'
-import { getCustomFields, deleteCustomField, getWorkflows, deleteWorkflow, getPipelineStages, deletePipelineStage } from '@/lib/data'
+import type { CustomFieldDefinition, PipelineStage, WorkflowRule, User, UpdateLeadFieldAction } from '@/lib/types'
+import { getCustomFields, deleteCustomField, getWorkflows, deleteWorkflow, getPipelineStages, deletePipelineStage, getUsers } from '@/lib/data'
 import { AddCustomFieldDialog } from '@/components/settings/add-custom-field-dialog'
 import { AddStageDialog } from '@/components/settings/add-stage-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -18,20 +18,23 @@ export default function SettingsPage() {
     const [fields, setFields] = useState<CustomFieldDefinition[]>([]);
     const [stages, setStages] = useState<PipelineStage[]>([]);
     const [workflows, setWorkflows] = useState<WorkflowRule[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
 
     useEffect(() => {
         async function loadData() {
             setIsLoading(true);
-            const [customFields, pipelineStages, workflowRules] = await Promise.all([
+            const [customFields, pipelineStages, workflowRules, userList] = await Promise.all([
                 getCustomFields(),
                 getPipelineStages(),
-                getWorkflows()
+                getWorkflows(),
+                getUsers()
             ]);
             setFields(customFields);
             setStages(pipelineStages);
             setWorkflows(workflowRules);
+            setUsers(userList.filter(u => u.role === 'Counselor' || u.role === 'Receptionist'));
             setIsLoading(false);
         }
         loadData();
@@ -69,6 +72,13 @@ export default function SettingsPage() {
         } else {
             toast({ title: "Error", description: "Failed to delete workflow.", variant: "destructive" });
         }
+    }
+
+    const getActionDisplayValue = (action: UpdateLeadFieldAction) => {
+        if (action.field === 'assignedToId') {
+            return users.find(u => u.id === action.value)?.name || action.value;
+        }
+        return action.value;
     }
 
     return (
@@ -164,7 +174,7 @@ export default function SettingsPage() {
                                 <CardTitle>Workflow Automations</CardTitle>
                                 <CardDescription>Create rules to automate repetitive tasks.</CardDescription>
                             </div>
-                            <AddWorkflowDialog onWorkflowAdded={handleWorkflowAdded} pipelineStages={stages}>
+                            <AddWorkflowDialog onWorkflowAdded={handleWorkflowAdded} pipelineStages={stages} users={users}>
                                 <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Workflow</Button>
                             </AddWorkflowDialog>
                         </CardHeader>
@@ -195,8 +205,22 @@ export default function SettingsPage() {
                                                 <ArrowRight className="h-6 w-6 shrink-0 text-muted-foreground" />
                                                 <div className="flex-1 rounded-md border p-3 text-center bg-background">
                                                     <p className="font-medium text-foreground">THEN</p>
-                                                    <p className="mt-1 text-xs sm:text-sm">Create a new task</p>
-                                                    <code className="mt-2 text-xs bg-muted text-muted-foreground rounded px-2 py-1 block truncate">"{rule.action.template}"</code>
+                                                    {rule.action.type === 'CREATE_TASK' ? (
+                                                        <>
+                                                            <p className="mt-1 text-xs sm:text-sm">Create a new task</p>
+                                                            <code className="mt-2 text-xs bg-muted text-muted-foreground rounded px-2 py-1 block truncate">"{rule.action.template}"</code>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <p className="mt-1 text-xs sm:text-sm">Update lead field</p>
+                                                            <div className="mt-2 text-xs space-x-1">
+                                                                <span>Set</span>
+                                                                <Badge variant="outline">{rule.action.field === 'assignedToId' ? 'Assigned To' : 'Status'}</Badge>
+                                                                <span>to</span>
+                                                                <Badge variant="secondary">{getActionDisplayValue(rule.action)}</Badge>
+                                                            </div>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

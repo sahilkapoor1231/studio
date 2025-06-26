@@ -88,7 +88,19 @@ export type NewLeadPayload = {
 
 // WORKFLOW TYPES
 export type WorkflowTriggerType = 'LEAD_STATUS_CHANGED' | 'LEAD_CREATED';
-export type WorkflowActionType = 'CREATE_TASK';
+
+export type CreateTaskAction = {
+    type: 'CREATE_TASK';
+    template: string;
+};
+
+export type UpdateLeadFieldAction = {
+    type: 'UPDATE_LEAD_FIELD';
+    field: 'status' | 'assignedToId';
+    value: string; // Will be a stage name or a user ID
+};
+
+export type WorkflowAction = CreateTaskAction | UpdateLeadFieldAction;
 
 export type WorkflowRule = {
     id: string;
@@ -97,8 +109,5 @@ export type WorkflowRule = {
         type: WorkflowTriggerType;
         value?: string; 
     };
-    action: {
-        type: WorkflowActionType;
-        template: string;
-    };
+    action: WorkflowAction;
 }

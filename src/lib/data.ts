@@ -1,6 +1,6 @@
 'use server'
 
-import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType } from './types';
+import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType, WorkflowAction } from './types';
 import { subDays, formatISO, addDays } from 'date-fns';
 
 // This avoids issues with hot-reloading wiping out our data in development
@@ -96,6 +96,16 @@ const workflows = global.workflowsDb;
 const mockDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // --- WORKFLOW ENGINE ---
+const applyTemplate = (template: string, lead: Lead): string => {
+    return template
+        .replace(/{{lead.name}}/g, lead.name)
+        .replace(/{{lead.email}}/g, lead.email)
+        .replace(/{{lead.phone}}/g, lead.phone)
+        .replace(/{{lead.source}}/g, lead.source)
+        .replace(/{{lead.inquiryType}}/g, lead.inquiryType);
+};
+
+
 const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promise<boolean> => {
     let triggered = false;
     
@@ -107,14 +117,39 @@ const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promi
 
     for (const rule of matchingWorkflows) {
         if (rule.action.type === 'CREATE_TASK') {
-            const taskTitle = rule.action.template.replace('{{lead.name}}', lead.name);
+            const taskTitle = applyTemplate(rule.action.template, lead);
             await addTask({
                 lead: { id: lead.id, name: lead.name, photoUrl: lead.photoUrl },
                 title: taskTitle,
                 dueDate: formatISO(addDays(new Date(), 1)),
                 type: 'Call', // Default task type for workflows
             });
+            await addHistoryItem(lead.id, `Workflow "${rule.name}" created a task: "${taskTitle}".`, 'user-ai');
             triggered = true;
+        } else if (rule.action.type === 'UPDATE_LEAD_FIELD') {
+            const { field, value } = rule.action;
+            const leadToUpdate = leads.find(l => l.id === lead.id);
+            if (leadToUpdate) {
+                let actionTaken = false;
+                if (field === 'status' && leadToUpdate.status !== value) {
+                    leadToUpdate.status = value;
+                    actionTaken = true;
+                } else if (field === 'assignedToId' && leadToUpdate.assignedTo.id !== value) {
+                    const user = users.find(u => u.id === value);
+                    if (user) {
+                        leadToUpdate.assignedTo = user;
+                        actionTaken = true;
+                    }
+                }
+                
+                if (actionTaken) {
+                    const userDisplay = field === 'assignedToId' ? users.find(u => u.id === value)?.name : value;
+                    await addHistoryItem(lead.id, `Workflow "${rule.name}" updated ${field} to "${userDisplay}".`, 'user-ai');
+                    triggered = true;
+                    // Note: This could trigger other workflows. For a simple system this is okay.
+                    // For a complex system, we'd need to prevent infinite loops.
+                }
+            }
         }
     }
     return triggered;
@@ -158,6 +193,7 @@ export const updateLeadStatus = async (leadId: string, newStatus: string): Promi
     
     leads[leadIndex].status = newStatus;
     const lead = leads[leadIndex];
+    await addHistoryItem(leadId, `Status changed to ${newStatus}`, 'user-2'); // Assume user-2 is the current user
     
     await mockDelay(200);
     const workflowTriggered = await runWorkflows('LEAD_STATUS_CHANGED', lead);
@@ -200,6 +236,7 @@ export const addNote = async (leadId: string, noteContent: string, userId: strin
         content: noteContent
     };
     lead.notes.unshift(newNote);
+    await addHistoryItem(leadId, `Added a note.`, userId);
     return newNote;
 }
 

@@ -26,16 +26,28 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { PipelineStage, WorkflowRule, WorkflowTriggerType } from "@/lib/types"
+import type { PipelineStage, WorkflowRule, WorkflowTriggerType, WorkflowAction, User } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { addWorkflow } from "@/lib/data"
 
-const formSchema = z.object({
+const baseSchema = z.object({
   name: z.string().min(3, { message: "Workflow name must be at least 3 characters." }),
   triggerType: z.custom<WorkflowTriggerType>(),
   triggerValue: z.string().optional(),
-  actionTemplate: z.string().min(3, { message: "Task title is required." }),
-}).refine(data => {
+})
+
+const formSchema = z.discriminatedUnion("actionType", [
+    z.object({
+        actionType: z.literal("CREATE_TASK"),
+        actionTemplate: z.string().min(3, { message: "Task title is required." }),
+    }),
+    z.object({
+        actionType: z.literal("UPDATE_LEAD_FIELD"),
+        actionField: z.enum(["status", "assignedToId"]),
+        actionValue: z.string({ required_error: "Please select a value." }).min(1, { message: "Please select a value." }),
+    })
+]).and(baseSchema)
+.refine(data => {
     if (data.triggerType === 'LEAD_STATUS_CHANGED') {
         return !!data.triggerValue;
     }
@@ -47,7 +59,7 @@ const formSchema = z.object({
 
 type AddWorkflowFormValues = z.infer<typeof formSchema>
 
-export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages }: { children: React.ReactNode, onWorkflowAdded: (newWorkflow: WorkflowRule) => void, pipelineStages: PipelineStage[] }) {
+export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, users }: { children: React.ReactNode, onWorkflowAdded: (newWorkflow: WorkflowRule) => void, pipelineStages: PipelineStage[], users: User[] }) {
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
 
@@ -57,23 +69,38 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages }:
       name: "",
       triggerType: "LEAD_STATUS_CHANGED",
       triggerValue: "",
+      actionType: "CREATE_TASK",
       actionTemplate: "Follow up with {{lead.name}}",
     },
   })
 
   const triggerType = form.watch('triggerType');
+  const actionType = form.watch('actionType');
+  const actionField = form.watch('actionField');
 
   async function onSubmit(values: AddWorkflowFormValues) {
     try {
+        let action: WorkflowAction;
+
+        if (values.actionType === 'CREATE_TASK') {
+            action = {
+                type: 'CREATE_TASK',
+                template: values.actionTemplate,
+            };
+        } else {
+            action = {
+                type: 'UPDATE_LEAD_FIELD',
+                field: values.actionField,
+                value: values.actionValue,
+            };
+        }
+
         const workflowData: Omit<WorkflowRule, 'id'> = {
             name: values.name,
             trigger: {
                 type: values.triggerType,
             },
-            action: {
-                type: 'CREATE_TASK' as const,
-                template: values.actionTemplate,
-            }
+            action: action
         }
         if (values.triggerType === 'LEAD_STATUS_CHANGED') {
             workflowData.trigger.value = values.triggerValue;
@@ -123,7 +150,7 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages }:
             />
             
             <div className="rounded-md border p-4 space-y-4">
-                <h4 className="font-semibold text-sm">Trigger</h4>
+                <h4 className="font-semibold text-sm">Trigger (WHEN)</h4>
                  <FormField
                     control={form.control}
                     name="triggerType"
@@ -137,8 +164,8 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages }:
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                                <SelectItem value="LEAD_CREATED">Lead is Created</SelectItem>
-                                <SelectItem value="LEAD_STATUS_CHANGED">Lead Status Changes</SelectItem>
+                                <SelectItem value="LEAD_CREATED">A new lead is created</SelectItem>
+                                <SelectItem value="LEAD_STATUS_CHANGED">Lead status changes</SelectItem>
                             </SelectContent>
                         </Select>
                         <FormMessage />
@@ -170,23 +197,74 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages }:
             </div>
             
             <div className="rounded-md border p-4 space-y-4">
-                 <h4 className="font-semibold text-sm">Action</h4>
-                 <p className="text-sm text-muted-foreground -mt-2">Then, create a new task with the title...</p>
-                <FormField
+                <h4 className="font-semibold text-sm">Action (THEN)</h4>
+                 <FormField
                     control={form.control}
-                    name="actionTemplate"
+                    name="actionType"
                     render={({ field }) => (
-                        <FormItem>
-                        <FormControl>
-                            <Input {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          You can use <code>{'{{lead.name}}'}</code> as a placeholder.
-                        </FormDescription>
-                        <FormMessage />
-                        </FormItem>
+                        <FormItem><FormLabel>Action</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select an action" /></SelectTrigger></FormControl><SelectContent><SelectItem value="CREATE_TASK">Create Task</SelectItem><SelectItem value="UPDATE_LEAD_FIELD">Update Lead Field</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                     )}
                 />
+
+                {actionType === 'CREATE_TASK' && (
+                     <FormField
+                        control={form.control}
+                        name="actionTemplate"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Task Title</FormLabel>
+                                <FormControl><Input {...field} /></FormControl>
+                                <FormDescription>Placeholders: {'{{lead.name}}'}, {'{{lead.inquiryType}}'}</FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
+
+                {actionType === 'UPDATE_LEAD_FIELD' && (
+                    <>
+                        <FormField
+                            control={form.control}
+                            name="actionField"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Field to Update</FormLabel>
+                                <Select onValueChange={(value) => { field.onChange(value); form.setValue('actionValue', '') }} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a field" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="status">Status</SelectItem>
+                                        <SelectItem value="assignedToId">Assigned To</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        {actionField && (
+                             <FormField
+                                control={form.control}
+                                name="actionValue"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Set To</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select a value" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                            {actionField === 'status' && pipelineStages.map(stage => <SelectItem key={stage.id} value={stage.name}>{stage.name}</SelectItem>)}
+                                            {actionField === 'assignedToId' && users.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+                    </>
+                )}
             </div>
 
             <DialogFooter>
