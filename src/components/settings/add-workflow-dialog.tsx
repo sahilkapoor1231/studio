@@ -143,7 +143,7 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages }:
                             <Input {...field} />
                         </FormControl>
                         <FormDescription>
-                            You can use `{{lead.name}}` as a placeholder.
+                          You can use <code>{'{{lead.name}}'}</code> as a placeholder.
                         </FormDescription>
                         <FormMessage />
                         </FormItem>
