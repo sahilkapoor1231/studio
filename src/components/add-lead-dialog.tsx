@@ -27,13 +27,13 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getUsers } from "@/lib/data"
 import { getCustomFields } from "@/lib/custom-fields"
-import type { Lead, User, LeadStatus, CustomFieldDefinition, CustomFieldType } from "@/lib/types"
+import { getPipelineStages } from "@/lib/pipeline-stages"
+import type { Lead, User, CustomFieldDefinition, CustomFieldType, PipelineStage } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { Separator } from "./ui/separator"
 import { Skeleton } from "./ui/skeleton"
 
 const leadSources = ['Website Form', 'Facebook Ad', 'Walk-in', 'IVR', 'WhatsApp'] as const;
-const leadStatuses: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Appointment Scheduled', 'No Go', 'Converted'];
 const inquiryTypes = ['General OPD', 'IVF Journey', 'Surgery Consultation'] as const;
 
 // Base schema for standard fields
@@ -43,7 +43,7 @@ const baseFormSchema = z.object({
   phone: z.string().min(10, { message: "Phone number is too short." }),
   source: z.enum(leadSources),
   assignedToId: z.string({ required_error: "Please assign this lead." }),
-  status: z.enum(leadStatuses),
+  status: z.string({ required_error: "Please select a status." }),
   inquiryType: z.enum(inquiryTypes),
   photoUrl: z.string().url().optional(),
 });
@@ -88,10 +88,11 @@ const generateCustomFieldsSchema = (customFields: CustomFieldDefinition[]) => {
 };
 
 
-export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { children: React.ReactNode, onLeadAdded?: (newLead: Lead) => void, defaultStatus?: LeadStatus }) {
+export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { children: React.ReactNode, onLeadAdded?: (newLead: Lead) => void, defaultStatus?: string }) {
   const [open, setOpen] = useState(false)
   const [users, setUsers] = useState<User[]>([])
   const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
+  const [pipelineStages, setPipelineStages] = useState<PipelineStage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast()
 
@@ -110,7 +111,7 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
       email: "",
       phone: "",
       source: "Website Form",
-      status: defaultStatus || "New",
+      status: defaultStatus || undefined,
       inquiryType: "General OPD",
       customFields: {},
     },
@@ -119,12 +120,14 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
-      const [fetchedUsers, fetchedCustomFields] = await Promise.all([
+      const [fetchedUsers, fetchedCustomFields, fetchedStages] = await Promise.all([
         getUsers(),
-        getCustomFields()
+        getCustomFields(),
+        getPipelineStages()
       ]);
       setUsers(fetchedUsers.filter(u => u.role === 'Counselor' || u.role === 'Receptionist'));
       setCustomFields(fetchedCustomFields);
+      setPipelineStages(fetchedStages);
       
       const defaultCustomValues: Record<string, any> = {};
       fetchedCustomFields.forEach(field => {
@@ -136,7 +139,7 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
         email: "",
         phone: "",
         source: "Website Form",
-        status: defaultStatus || "New",
+        status: defaultStatus || fetchedStages[0]?.name,
         inquiryType: "General OPD",
         customFields: defaultCustomValues,
       });
@@ -228,6 +231,7 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
                     <Skeleton className="h-10 w-full" />
                     <Skeleton className="h-10 w-full" />
                     <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
                 </div>
             ) : (
                 <>
@@ -251,6 +255,13 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
                     render={({ field }) => (
                         <FormItem><FormLabel>Phone</FormLabel><FormControl><Input placeholder="+1-202-555-0101" {...field} /></FormControl><FormMessage /></FormItem>
                     )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                            <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl><SelectContent>{pipelineStages.map(stage => <SelectItem key={stage.id} value={stage.name}>{stage.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                        )}
                     />
                     <FormField
                         control={form.control}

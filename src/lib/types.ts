@@ -5,7 +5,11 @@ export type User = {
   role: 'Admin' | 'Counselor' | 'Receptionist' | 'Doctor';
 };
 
-export type LeadStatus = 'New' | 'Contacted' | 'Qualified' | 'Appointment Scheduled' | 'No Go' | 'Converted';
+export type PipelineStage = {
+    id: string;
+    name: string;
+}
+
 export type LeadSource = 'Website Form' | 'Facebook Ad' | 'Walk-in' | 'IVR' | 'WhatsApp';
 export type LeadStage = 'Initial Inquiry' | 'Consultation Done' | 'Procedure Booked' | 'Follow-up Required';
 
@@ -48,7 +52,7 @@ export type Lead = {
   phone: string;
   source: LeadSource;
   assignedTo: User;
-  status: LeadStatus;
+  status: string; // This now refers to the name of a PipelineStage
   stage: LeadStage;
   lastContacted: string;
   inquiryType: 'General OPD' | 'IVF Journey' | 'Surgery Consultation';

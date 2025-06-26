@@ -4,32 +4,33 @@ import { useEffect, useState } from "react"
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 
 import { getLeads } from "@/lib/data"
-import type { Lead, LeadStatus } from "@/lib/types"
+import type { Lead, PipelineStage } from "@/lib/types"
 import { PipelineColumn } from "@/components/pipeline/pipeline-column"
 import { LeadCard } from "@/components/pipeline/lead-card"
 import { createPortal } from "react-dom"
-
-const pipelineStages: LeadStatus[] = [
-  'New',
-  'Contacted',
-  'Qualified',
-  'Appointment Scheduled',
-  'Converted',
-];
-
+import { getPipelineStages } from "@/lib/pipeline-stages"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function PipelinePage() {
     const [leads, setLeads] = useState<Lead[]>([]);
+    const [stages, setStages] = useState<PipelineStage[]>([]);
     const [activeLead, setActiveLead] = useState<Lead | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
         setIsClient(true);
-        async function loadLeads() {
-            const initialLeads = await getLeads();
+        async function loadData() {
+            setIsLoading(true);
+            const [initialLeads, initialStages] = await Promise.all([
+                getLeads(),
+                getPipelineStages()
+            ]);
             setLeads(initialLeads);
+            setStages(initialStages);
+            setIsLoading(false);
         }
-        loadLeads();
+        loadData();
     }, []);
 
     const sensors = useSensors(
@@ -56,7 +57,7 @@ export default function PipelinePage() {
                 if (leadIndex === -1) return prevLeads;
 
                 const updatedLeads = [...prevLeads];
-                const movedLead = { ...updatedLeads[leadIndex], status: over.id as LeadStatus };
+                const movedLead = { ...updatedLeads[leadIndex], status: over.id as string };
                 updatedLeads[leadIndex] = movedLead;
 
                 return updatedLeads;
@@ -65,7 +66,43 @@ export default function PipelinePage() {
     }
 
     const handleLeadAdded = (newLead: Lead) => {
-        setLeads(prev => [...prev, newLead]);
+        setLeads(prev => [newLead, ...prev]);
+    }
+    
+    const renderPipeline = () => {
+        if (isLoading) {
+            return (
+                <div className="flex gap-6 h-full">
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="flex-1 min-w-[300px] flex flex-col">
+                             <div className="bg-muted/50 rounded-lg p-4 pt-3 flex flex-col flex-1">
+                                <div className="flex justify-between items-center mb-4">
+                                    <Skeleton className="h-6 w-1/2" />
+                                    <Skeleton className="h-6 w-8" />
+                                </div>
+                                <div className="space-y-4">
+                                    <Skeleton className="h-24 w-full" />
+                                    <Skeleton className="h-24 w-full" />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )
+        }
+
+        return (
+             <div className="flex gap-6 h-full">
+                {stages.map(stage => (
+                    <PipelineColumn 
+                        key={stage.id}
+                        stage={stage}
+                        leads={leads.filter(l => l.status === stage.name)}
+                        onLeadAdded={handleLeadAdded}
+                    />
+                ))}
+            </div>
+        )
     }
 
     return (
@@ -80,16 +117,7 @@ export default function PipelinePage() {
                     <p className="text-muted-foreground">Visualize and manage your lead flow by dragging cards.</p>
                 </div>
                 <div className="flex-1 overflow-x-auto pb-4">
-                    <div className="flex gap-6 h-full">
-                        {pipelineStages.map(stage => (
-                            <PipelineColumn 
-                                key={stage}
-                                title={stage}
-                                leads={leads.filter(l => l.status === stage)}
-                                onLeadAdded={handleLeadAdded}
-                            />
-                        ))}
-                    </div>
+                    {renderPipeline()}
                 </div>
                  {isClient && createPortal(
                     <DragOverlay dropAnimation={null}>
