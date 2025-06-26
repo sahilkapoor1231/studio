@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import {
   add,
   eachDayOfInterval,
@@ -13,25 +14,35 @@ import {
   isToday,
   parse,
   startOfToday,
+  parseISO,
 } from 'date-fns'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-
-const tasks = [
-    { date: '2024-07-25', title: 'Follow up with Emily Davis', type: 'Call'},
-    { date: '2024-07-25', title: 'Send info to John Doe', type: 'Message'},
-    { date: '2024-07-28', title: 'Appointment: Michael Johnson', type: 'Appointment'},
-    { date: '2024-08-02', title: 'Call Jane Smith', type: 'Call'},
-];
+import { getTasks } from '@/lib/data'
+import type { Task } from '@/lib/types'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export default function CalendarPage() {
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   let today = startOfToday()
   let [selectedDay, setSelectedDay] = useState(today)
   let [currentMonth, setCurrentMonth] = useState(format(today, 'MMM-yyyy'))
   let firstDayCurrentMonth = parse(currentMonth, 'MMM-yyyy', new Date())
+
+  useEffect(() => {
+    async function loadTasks() {
+        setIsLoading(true);
+        const fetchedTasks = await getTasks();
+        setTasks(fetchedTasks);
+        setIsLoading(false);
+    }
+    loadTasks();
+  }, [])
 
   let days = eachDayOfInterval({
     start: firstDayCurrentMonth,
@@ -49,8 +60,14 @@ export default function CalendarPage() {
   }
 
   let selectedDayTasks = tasks.filter((task) =>
-    isSameDay(parse(task.date, 'yyyy-MM-dd', new Date()), selectedDay)
+    isSameDay(parseISO(task.dueDate), selectedDay)
   )
+
+  const taskTypeColors: Record<Task['type'], 'default' | 'secondary' | 'outline' | 'destructive'> = {
+    'Appointment': 'default',
+    'Call': 'secondary',
+    'Message': 'outline'
+  }
 
   return (
     <div className="space-y-6">
@@ -104,8 +121,8 @@ export default function CalendarPage() {
                                     </time>
                                 </button>
                                 <div className="w-1 h-1 mx-auto mt-1">
-                                    {tasks.some(task => isSameDay(parse(task.date, 'yyyy-MM-dd', new Date()), day)) && (
-                                        <div className="w-1 h-1 rounded-full bg-accent-foreground"></div>
+                                    {tasks.some(task => isSameDay(parseISO(task.dueDate), day)) && (
+                                        <div className="w-1 h-1 rounded-full bg-accent"></div>
                                     )}
                                 </div>
                             </div>
@@ -117,17 +134,32 @@ export default function CalendarPage() {
                             Schedule for <time dateTime={format(selectedDay, 'yyyy-MM-dd')}>{format(selectedDay, 'PP')}</time>
                         </h2>
                         <ol className="mt-4 space-y-3">
-                        {selectedDayTasks.length > 0 ? (
-                            selectedDayTasks.map((task, i) => (
-                                <li key={i} className="flex items-center gap-3 rounded-lg bg-secondary p-3">
+                        {isLoading ? (
+                            <div className="space-y-3">
+                                <Skeleton className="h-16 w-full" />
+                                <Skeleton className="h-16 w-full" />
+                            </div>
+                        ) : selectedDayTasks.length > 0 ? (
+                            selectedDayTasks.map((task) => (
+                                <li key={task.id} className="flex items-center gap-3 rounded-lg bg-secondary p-3">
+                                    <Avatar className="h-9 w-9 border">
+                                        <AvatarImage src={task.lead.photoUrl} alt={task.lead.name} data-ai-hint="person face" />
+                                        <AvatarFallback>{task.lead.name.charAt(0)}</AvatarFallback>
+                                    </Avatar>
                                     <div className="flex-1">
                                         <p className="font-medium text-sm">{task.title}</p>
+                                        <Link href={`/leads/${task.lead.id}`} className="text-xs text-muted-foreground hover:underline flex items-center gap-1">
+                                            <User className="h-3 w-3" />
+                                            {task.lead.name}
+                                        </Link>
                                     </div>
-                                    <Badge variant={task.type === 'Appointment' ? 'default' : 'outline'}>{task.type}</Badge>
+                                    <Badge variant={taskTypeColors[task.type]} className={cn(task.status === 'Overdue' && 'bg-destructive text-destructive-foreground')}>
+                                        {task.status === 'Overdue' ? 'Overdue' : task.type}
+                                    </Badge>
                                 </li>
                             ))
                         ) : (
-                            <p>No tasks for today.</p>
+                            <p className="text-muted-foreground">No tasks for today.</p>
                         )}
                         </ol>
                     </section>

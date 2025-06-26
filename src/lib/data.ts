@@ -1,5 +1,5 @@
 import { User, Lead, Task } from './types';
-import { subDays, formatISO } from 'date-fns';
+import { subDays, formatISO, addDays } from 'date-fns';
 
 const users: User[] = [
   { id: 'user-1', name: 'Dr. Evelyn Reed', avatarUrl: 'https://placehold.co/100x100/E8E8E8/4F4F4F.png', role: 'Doctor' },
@@ -113,8 +113,9 @@ const leads: Lead[] = [
 const tasks: Task[] = [
     { id: 'task-1', lead: leads[3], title: "Follow up with Emily Davis", dueDate: formatISO(new Date()), status: 'Pending', type: 'Call'},
     { id: 'task-2', lead: leads[0], title: "Send post-consultation info", dueDate: formatISO(new Date()), status: 'Pending', type: 'Message'},
-    { id: 'task-3', lead: leads[2], title: "Appointment with Dr. Reed", dueDate: formatISO(subDays(new Date(), -3)), status: 'Pending', type: 'Appointment'},
-    { id: 'task-4', lead: leads[1], title: "Initial contact call", dueDate: formatISO(subDays(new Date(), 1)), status: 'Overdue', type: 'Call'},
+    { id: 'task-3', lead: leads[2], title: "Appointment with Dr. Reed", dueDate: formatISO(addDays(new Date(), 3)), status: 'Pending', type: 'Appointment'},
+    { id: 'task-4', lead: leads[1], title: "Initial contact call", dueDate: formatISO(subDays(new Date(), 2)), status: 'Overdue', type: 'Call'},
+    { id: 'task-5', lead: leads[0], title: "Discuss financing options", dueDate: formatISO(addDays(new Date(), 1)), status: 'Pending', type: 'Call'},
 ];
 
 
