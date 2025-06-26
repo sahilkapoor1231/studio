@@ -12,8 +12,8 @@ import type { HistoryItem, Note } from '@/lib/types';
 import {z} from 'genkit';
 
 // Helper to format history and notes for the prompt
-const formatHistory = (history: HistoryItem[]) => history.map(h => `${h.timestamp}: ${h.action} (by ${h.user.name})`).join('\n');
-const formatNotes = (notes: Note[]) => notes.map(n => `${n.timestamp}: ${n.content} (by ${n.user.name})`).join('\n');
+const formatHistory = (history: HistoryItem[]) => history.map(h => `${h.timestamp}: ${h.action} (by ${h.user ? h.user.name : 'System'})`).join('\n');
+const formatNotes = (notes: Note[]) => notes.map(n => `${n.timestamp}: ${n.content} (by ${n.user ? n.user.name : 'System'})`).join('\n');
 const formatCustomFields = (fields: Record<string, any>) => JSON.stringify(fields, null, 2);
 
 
@@ -47,7 +47,8 @@ export async function summarizeLead(lead: {
         notes: formatNotes(lead.notes),
         customFields: formatCustomFields(lead.customFields || {}),
     };
-  return summarizeLeadFlow(input);
+  const {output} = await summarizeLeadFlow(input);
+  return output!;
 }
 
 const prompt = ai.definePrompt({
