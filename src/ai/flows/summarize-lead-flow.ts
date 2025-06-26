@@ -17,7 +17,7 @@ const formatNotes = (notes: Note[]) => notes.map(n => `${n.timestamp}: ${n.conte
 const formatCustomFields = (fields: Record<string, any>) => JSON.stringify(fields, null, 2);
 
 
-export const SummarizeLeadInputSchema = z.object({
+const SummarizeLeadInputSchema = z.object({
   name: z.string().describe('The name of the lead.'),
   inquiryType: z.string().describe('The type of inquiry the lead has made.'),
   history: z.string().describe('The chronological history of interactions with the lead.'),
@@ -26,7 +26,7 @@ export const SummarizeLeadInputSchema = z.object({
 });
 export type SummarizeLeadInput = z.infer<typeof SummarizeLeadInputSchema>;
 
-export const SummarizeLeadOutputSchema = z.object({
+const SummarizeLeadOutputSchema = z.object({
   summary: z.string().describe("A concise 2-3 sentence summary of the lead's current situation and key points."),
   temperature: z.enum(['Hot', 'Warm', 'Cold']).describe("The lead's temperature, indicating their likelihood to convert. 'Hot' for very likely, 'Warm' for moderately likely, 'Cold' for unlikely."),
   suggestedNextSteps: z.array(z.string()).describe('A list of 3-4 concrete, actionable next steps for the sales counselor to take.'),
