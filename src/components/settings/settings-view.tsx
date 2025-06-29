@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { ArrowRight, Edit, Filter, PlusCircle, Tag, Trash2, UserPlus, Workflow } from 'lucide-react'
 import type { CustomFieldDefinition, PipelineStage, WorkflowRule, User, UpdateLeadFieldAction, WorkflowCondition } from '@/lib/types'
-import { deleteCustomField, deleteWorkflow, deletePipelineStage, deleteUser } from '@/lib/data'
+import { deleteCustomField, deleteWorkflow, deletePipelineStage, deleteUser, updateWorkflowStatus } from '@/lib/data'
 import { AddCustomFieldDialog } from '@/components/settings/add-custom-field-dialog'
 import { AddStageDialog } from '@/components/settings/add-stage-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +15,7 @@ import { AddWorkflowDialog } from '@/components/settings/add-workflow-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { InviteUserDialog } from './invite-user-dialog'
 import { EditUserDialog } from './edit-user-dialog'
+import { Switch } from '@/components/ui/switch'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,6 +77,16 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
             toast({ title: "Workflow Deleted", description: "The automation rule has been removed." });
         } else {
             toast({ title: "Error", description: "Failed to delete workflow.", variant: "destructive" });
+        }
+    }
+
+    const handleWorkflowStatusChange = async (workflowId: string, newStatus: 'active' | 'inactive') => {
+        const updatedWorkflow = await updateWorkflowStatus(workflowId, newStatus);
+        if (updatedWorkflow) {
+            setWorkflows(prev => prev.map(w => w.id === workflowId ? updatedWorkflow : w));
+            toast({ title: "Workflow Updated", description: `Workflow is now ${newStatus}.` });
+        } else {
+             toast({ title: "Error", description: "Failed to update workflow status.", variant: "destructive" });
         }
     }
     
@@ -217,7 +228,16 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                                 <Workflow className="h-5 w-5 text-primary mt-1" />
                                                 <div>
                                                     <h4 className="font-semibold">{rule.name}</h4>
-                                                    <p className="text-xs text-muted-foreground">Automation Rule</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <Switch
+                                                            id={`workflow-status-${rule.id}`}
+                                                            checked={rule.status === 'active'}
+                                                            onCheckedChange={(checked) => handleWorkflowStatusChange(rule.id, checked ? 'active' : 'inactive')}
+                                                        />
+                                                        <Badge variant={rule.status === 'active' ? 'default' : 'secondary'}>
+                                                            {rule.status === 'active' ? 'Active' : 'Inactive'}
+                                                        </Badge>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteWorkflow(rule.id)}>

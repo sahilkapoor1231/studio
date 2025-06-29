@@ -61,8 +61,8 @@ const initialTasks: Task[] = [
 ];
 
 const initialWorkflows: WorkflowRule[] = [
-    { id: 'wf-1', name: 'Task on Appointment', trigger: { type: 'LEAD_STATUS_CHANGED', value: 'Appointment Scheduled'}, conditions: [], action: { type: 'CREATE_TASK', template: 'Prepare for {{lead.name}} appointment' } },
-    { id: 'wf-2', name: 'Tag new website leads', trigger: { type: 'LEAD_CREATED' }, conditions: [{id: 'cond-1', field: 'source', operator: 'EQUALS', value: 'Website Form'}], action: { type: 'ADD_TAG', tag: 'Website Lead' } }
+    { id: 'wf-1', name: 'Task on Appointment', status: 'active', trigger: { type: 'LEAD_STATUS_CHANGED', value: 'Appointment Scheduled'}, conditions: [], action: { type: 'CREATE_TASK', template: 'Prepare for {{lead.name}} appointment' } },
+    { id: 'wf-2', name: 'Tag new website leads', status: 'active', trigger: { type: 'LEAD_CREATED' }, conditions: [{id: 'cond-1', field: 'source', operator: 'EQUALS', value: 'Website Form'}], action: { type: 'ADD_TAG', tag: 'Website Lead' } }
 ]
 
 // --- DATABASE INITIALIZATION ---
@@ -134,6 +134,7 @@ const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promi
     let triggered = false;
     
     const matchingWorkflows = workflows.filter(w => {
+        if (w.status !== 'active') return false; // Only run active workflows
         if (w.trigger.type !== triggerType) return false;
         if (triggerType === 'LEAD_STATUS_CHANGED' && w.trigger.value !== lead.status) return false;
         return true;
@@ -399,6 +400,16 @@ export const addWorkflow = async (rule: Omit<WorkflowRule, 'id'>): Promise<Workf
   workflows.push(newRule);
   await mockDelay(100);
   return newRule;
+}
+
+export const updateWorkflowStatus = async (workflowId: string, status: 'active' | 'inactive'): Promise<WorkflowRule | null> => {
+    const rule = workflows.find(r => r.id === workflowId);
+    if (rule) {
+        rule.status = status;
+        await mockDelay(100);
+        return { ...rule };
+    }
+    return null;
 }
 
 export const deleteWorkflow = async (ruleId: string): Promise<{ success: boolean }> => {

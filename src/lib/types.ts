@@ -128,6 +128,7 @@ export type WorkflowCondition = {
 export type WorkflowRule = {
     id: string;
     name: string;
+    status: 'active' | 'inactive';
     trigger: {
         type: WorkflowTriggerType;
         value?: string; 
