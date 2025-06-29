@@ -60,7 +60,7 @@ export function LeadTable({ leads, onLeadUpdated, onLeadDeleted }: { leads: Lead
       onLeadDeleted(leadId);
       toast({
         title: "Lead Deleted",
-        description: "The lead has been moved to the recycle bin.",
+        description: "The lead record has been deleted.",
       });
     } catch (error) {
       toast({
