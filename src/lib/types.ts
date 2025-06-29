@@ -112,7 +112,7 @@ export type AddNoteAction = {
 
 export type WorkflowAction = CreateTaskAction | UpdateLeadFieldAction | AddTagAction | AddNoteAction;
 
-export type WorkflowConditionField = 'source' | 'inquiryType' | 'status';
+export type WorkflowConditionField = 'source' | 'inquiryType' | 'status' | 'stage';
 export type WorkflowConditionOperator = 'EQUALS' | 'NOT_EQUALS';
 
 export type WorkflowCondition = {

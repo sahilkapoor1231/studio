@@ -25,11 +25,11 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { PipelineStage, WorkflowRule, WorkflowTriggerType, WorkflowAction, User, WorkflowCondition, WorkflowConditionField, WorkflowConditionOperator } from "@/lib/types"
+import type { PipelineStage, WorkflowRule, WorkflowTriggerType, WorkflowAction, User, WorkflowCondition, WorkflowConditionField, WorkflowConditionOperator, LeadStage } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { addWorkflow } from "@/lib/data"
 import { Textarea } from "@/components/ui/textarea"
-import { HelpCircle, PlusCircle, Trash2, X } from "lucide-react"
+import { HelpCircle, PlusCircle, Trash2 } from "lucide-react"
 
 function PlaceholderHelpDialog() {
     return (
@@ -53,7 +53,8 @@ function PlaceholderHelpDialog() {
                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.phone}}'}</code> - The lead's phone number.</li>
                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.source}}'}</code> - Where the lead came from.</li>
                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.inquiryType}}'}</code> - The type of inquiry.</li>
-                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.status}}'}</code> - The lead's current status.</li>
+                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.status}}'}</code> - The lead's current status/pipeline stage.</li>
+                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.stage}}'}</code> - The lead's current sub-stage.</li>
                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.assignedTo.name}}'}</code> - Name of the assigned team member.</li>
                         </ul>
                     </div>
@@ -138,6 +139,7 @@ type AddWorkflowFormValues = z.infer<typeof formSchema>
 
 const leadSources = ['Website Form', 'Facebook Ad', 'Walk-in', 'IVR', 'WhatsApp'] as const;
 const inquiryTypes = ['General OPD', 'IVF Journey', 'Surgery Consultation'] as const;
+const leadStages: LeadStage[] = ['Initial Inquiry', 'Consultation Done', 'Procedure Booked', 'Follow-up Required'];
 
 export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, users }: { children: React.ReactNode, onWorkflowAdded: (newWorkflow: WorkflowRule) => void, pipelineStages: PipelineStage[], users: User[] }) {
   const [open, setOpen] = useState(false)
@@ -214,6 +216,8 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
         return inquiryTypes;
       case 'status':
         return pipelineStages.map(s => s.name);
+      case 'stage':
+        return leadStages;
       default:
         return [];
     }
@@ -301,7 +305,7 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                                 control={form.control}
                                 name={`conditions.${index}.field`}
                                 render={({ field }) => (
-                                    <FormItem><FormLabel>Field</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Field" /></SelectTrigger></FormControl><SelectContent><SelectItem value="source">Source</SelectItem><SelectItem value="inquiryType">Inquiry Type</SelectItem><SelectItem value="status">Status</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                                    <FormItem><FormLabel>Field</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Field" /></SelectTrigger></FormControl><SelectContent><SelectItem value="source">Source</SelectItem><SelectItem value="inquiryType">Inquiry Type</SelectItem><SelectItem value="status">Status</SelectItem><SelectItem value="stage">Stage</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                                 )}
                             />
                              <FormField

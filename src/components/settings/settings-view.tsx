@@ -3,14 +3,13 @@
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, CaseSensitive, Filter, MessageSquare, PlusCircle, Tag, Trash2, Workflow } from 'lucide-react'
-import type { CustomFieldDefinition, PipelineStage, WorkflowRule, User, UpdateLeadFieldAction, AddTagAction, WorkflowCondition } from '@/lib/types'
+import { ArrowRight, Filter, PlusCircle, Tag, Trash2, Workflow } from 'lucide-react'
+import type { CustomFieldDefinition, PipelineStage, WorkflowRule, User, UpdateLeadFieldAction, WorkflowCondition } from '@/lib/types'
 import { deleteCustomField, deleteWorkflow, deletePipelineStage } from '@/lib/data'
 import { AddCustomFieldDialog } from '@/components/settings/add-custom-field-dialog'
 import { AddStageDialog } from '@/components/settings/add-stage-dialog'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AddWorkflowDialog } from '@/components/settings/add-workflow-dialog'
 
@@ -73,6 +72,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
             source: 'Source',
             inquiryType: 'Inquiry Type',
             status: 'Status',
+            stage: 'Stage',
         }
         const operatorMap = {
             EQUALS: 'equals',

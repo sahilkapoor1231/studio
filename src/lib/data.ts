@@ -105,6 +105,7 @@ const applyTemplate = (template: string, lead: Lead): string => {
         .replace(/{{lead.source}}/g, lead.source)
         .replace(/{{lead.inquiryType}}/g, lead.inquiryType)
         .replace(/{{lead.status}}/g, lead.status)
+        .replace(/{{lead.stage}}/g, lead.stage)
         .replace(/{{lead.assignedTo.name}}/g, lead.assignedTo.name);
 };
 
