@@ -1,9 +1,11 @@
+export type UserRole = 'Admin' | 'Counselor' | 'Receptionist' | 'Doctor';
+
 export type User = {
   id: string;
   name: string;
   email: string;
   avatarUrl: string;
-  role: 'Admin' | 'Counselor' | 'Receptionist' | 'Doctor';
+  role: UserRole;
 };
 
 export type PipelineStage = {

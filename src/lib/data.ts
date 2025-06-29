@@ -1,6 +1,6 @@
 'use server'
 
-import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType, WorkflowAction, AddNoteAction, AddTagAction, CreateTaskAction, UpdateLeadFieldAction, WorkflowCondition } from './types';
+import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType, WorkflowAction, AddNoteAction, AddTagAction, CreateTaskAction, UpdateLeadFieldAction, WorkflowCondition, UserRole } from './types';
 import { subDays, formatISO, addDays } from 'date-fns';
 
 // This avoids issues with hot-reloading wiping out our data in development
@@ -256,10 +256,21 @@ export const getUsers = async (): Promise<User[]> => {
     return [...users];
 }
 
+export const updateUserRole = async (userId: string, newRole: UserRole): Promise<User> => {
+    await mockDelay(100);
+    const user = users.find(u => u.id === userId);
+    if (!user) throw new Error("User not found");
+    if (['user-2', 'user-ai'].includes(user.id)) {
+        throw new Error("Cannot change role for this essential user.");
+    }
+    user.role = newRole;
+    return { ...user };
+}
+
 export const deleteUser = async (userId: string): Promise<{ success: boolean; message?: string }> => {
     if (['user-2', 'user-ai'].includes(userId)) {
         await mockDelay(100);
-        return { success: false, message: "This user is essential to the system and cannot be deleted." };
+        return { success: false, message: "This core user cannot be deleted." };
     }
     const index = users.findIndex(u => u.id === userId);
     if (index > -1) {

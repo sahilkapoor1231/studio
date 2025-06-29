@@ -13,6 +13,20 @@ import { useToast } from '@/hooks/use-toast'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AddWorkflowDialog } from '@/components/settings/add-workflow-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
+import { InviteUserDialog } from './invite-user-dialog'
+import { EditUserDialog } from './edit-user-dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
 
 interface SettingsViewProps {
     initialFields: CustomFieldDefinition[];
@@ -31,6 +45,9 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
     const handleFieldAdded = (newField: CustomFieldDefinition) => setFields(prev => [...prev, newField]);
     const handleStageAdded = (newStage: PipelineStage) => setStages(prev => [...prev, newStage]);
     const handleWorkflowAdded = (newWorkflow: WorkflowRule) => setWorkflows(prev => [...prev, newWorkflow]);
+    const handleUserUpdated = (updatedUser: User) => {
+        setAllUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    };
 
     const handleDeleteField = async (fieldId: string) => {
         const { success } = await deleteCustomField(fieldId);
@@ -283,7 +300,9 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                             <CardTitle>Users &amp; Roles</CardTitle>
                             <CardDescription>Manage your team members and their access levels.</CardDescription>
                         </div>
-                        <Button variant="outline"><UserPlus className="mr-2 h-4 w-4" /> Invite User</Button>
+                         <InviteUserDialog>
+                            <Button variant="outline"><UserPlus className="mr-2 h-4 w-4" /> Invite User</Button>
+                        </InviteUserDialog>
                     </CardHeader>
                     <CardContent>
                         <div className="rounded-md border">
@@ -304,12 +323,31 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Badge variant="secondary">{user.role}</Badge>
-                                            <Button variant="ghost" size="icon">
-                                                <Edit className="h-4 w-4" /><span className="sr-only">Edit {user.name}</span>
-                                            </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)}>
-                                                <Trash2 className="h-4 w-4 text-destructive" /><span className="sr-only">Delete {user.name}</span>
-                                            </Button>
+                                            <EditUserDialog user={user} onUserUpdated={handleUserUpdated}>
+                                                <Button variant="ghost" size="icon" disabled={['user-2', 'user-ai'].includes(user.id)}>
+                                                    <Edit className="h-4 w-4" /><span className="sr-only">Edit {user.name}</span>
+                                                </Button>
+                                            </EditUserDialog>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" disabled={['user-2', 'user-ai'].includes(user.id)}>
+                                                        <Trash2 className="h-4 w-4 text-destructive" /><span className="sr-only">Delete {user.name}</span>
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action cannot be undone. This will permanently delete the user account
+                                                        for {user.name}.
+                                                    </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteUser(user.id)}>Delete</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
                                         </div>
                                     </div>
                                 ))
