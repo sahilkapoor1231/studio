@@ -29,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { PipelineStage, WorkflowRule, WorkflowTriggerType, WorkflowAction, User } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { addWorkflow } from "@/lib/data"
+import { Textarea } from "@/components/ui/textarea"
 
 const baseSchema = z.object({
   name: z.string().min(3, { message: "Workflow name must be at least 3 characters." }),
@@ -217,7 +218,11 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                             <FormItem>
                                 <FormLabel>Task Title</FormLabel>
                                 <FormControl><Input {...field} /></FormControl>
-                                <FormDescription>Placeholders: {'{{lead.name}}'}, {'{{lead.inquiryType}}'}</FormDescription>
+                                <FormDescription>
+                                    Use placeholders like `{'{{lead.name}}'}` or `{'{{lead.email}}'}`.
+                                    <br />
+                                    E.g., "Follow up with {'{{lead.name}}'} about their {'{{lead.inquiryType}}'}."
+                                </FormDescription>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -231,8 +236,15 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Note Content</FormLabel>
-                                <FormControl><Input {...field} /></FormControl>
-                                <FormDescription>Placeholders: {'{{lead.name}}'}, {'{{lead.inquiryType}}'}</FormDescription>
+                                <FormControl>
+                                  <Textarea 
+                                      placeholder="e.g., AI analysis initiated for {{lead.name}}."
+                                      {...field}
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                    Use placeholders like `{'{{lead.name}}'}`, `{'{{lead.source}}'}`, etc. to add dynamic content to your note.
+                                </FormDescription>
                                 <FormMessage />
                             </FormItem>
                         )}
