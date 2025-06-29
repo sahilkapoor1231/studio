@@ -1,6 +1,6 @@
 'use server'
 
-import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType, WorkflowAction, AddNoteAction, AddTagAction, CreateTaskAction, UpdateLeadFieldAction } from './types';
+import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType, WorkflowAction, AddNoteAction, AddTagAction, CreateTaskAction, UpdateLeadFieldAction, WorkflowCondition } from './types';
 import { subDays, formatISO, addDays } from 'date-fns';
 
 // This avoids issues with hot-reloading wiping out our data in development
@@ -61,8 +61,8 @@ const initialTasks: Task[] = [
 ];
 
 const initialWorkflows: WorkflowRule[] = [
-    { id: 'wf-1', name: 'Task on Appointment', trigger: { type: 'LEAD_STATUS_CHANGED', value: 'Appointment Scheduled'}, action: { type: 'CREATE_TASK', template: 'Prepare for {{lead.name}} appointment' } },
-    { id: 'wf-2', name: 'Tag new website leads', trigger: { type: 'LEAD_CREATED' }, action: { type: 'ADD_TAG', tag: 'Website Lead' } }
+    { id: 'wf-1', name: 'Task on Appointment', trigger: { type: 'LEAD_STATUS_CHANGED', value: 'Appointment Scheduled'}, conditions: [], action: { type: 'CREATE_TASK', template: 'Prepare for {{lead.name}} appointment' } },
+    { id: 'wf-2', name: 'Tag new website leads', trigger: { type: 'LEAD_CREATED' }, conditions: [{id: 'cond-1', field: 'source', operator: 'EQUALS', value: 'Website Form'}], action: { type: 'ADD_TAG', tag: 'Website Lead' } }
 ]
 
 // --- DATABASE INITIALIZATION ---
@@ -108,6 +108,26 @@ const applyTemplate = (template: string, lead: Lead): string => {
         .replace(/{{lead.assignedTo.name}}/g, lead.assignedTo.name);
 };
 
+const checkConditions = (lead: Lead, conditions: WorkflowCondition[]): boolean => {
+    if (!conditions || conditions.length === 0) {
+        return true; // No conditions means it always passes
+    }
+
+    // All conditions must be met (AND logic)
+    for (const condition of conditions) {
+        const leadValue = lead[condition.field];
+        const conditionValue = condition.value;
+
+        if (condition.operator === 'EQUALS') {
+            if (leadValue !== conditionValue) return false;
+        } else if (condition.operator === 'NOT_EQUALS') {
+            if (leadValue === conditionValue) return false;
+        }
+    }
+
+    return true; // All conditions passed
+}
+
 
 const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promise<boolean> => {
     let triggered = false;
@@ -115,12 +135,16 @@ const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promi
     const matchingWorkflows = workflows.filter(w => {
         if (w.trigger.type !== triggerType) return false;
         if (triggerType === 'LEAD_STATUS_CHANGED' && w.trigger.value !== lead.status) return false;
-        // For LEAD_CREATED, we might want to add sub-conditions in the future, e.g., only for a specific source
         return true;
     });
 
     for (const rule of matchingWorkflows) {
-        triggered = true; // Mark as triggered if at least one rule matches
+        // Check if all conditions for this rule are met
+        if (!checkConditions(lead, rule.conditions)) {
+            continue; // Skip this rule if conditions don't match
+        }
+
+        triggered = true; // Mark as triggered if at least one rule matches and passes conditions
         if (rule.action.type === 'CREATE_TASK') {
             const taskTitle = applyTemplate(rule.action.template, lead);
             await addTask({
@@ -150,8 +174,6 @@ const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promi
                 if (actionTaken) {
                     const userDisplay = field === 'assignedToId' ? users.find(u => u.id === value)?.name : value;
                     await addHistoryItem(lead.id, `Workflow "${rule.name}" updated ${field} to "${userDisplay}".`, 'user-ai');
-                    // Note: This could trigger other workflows. For a simple system this is okay.
-                    // For a complex system, we'd need to prevent infinite loops.
                 }
             }
         } else if (rule.action.type === 'ADD_TAG') {
@@ -163,7 +185,6 @@ const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promi
         } else if (rule.action.type === 'ADD_NOTE') {
             const noteContent = applyTemplate(rule.action.template, lead);
             await addNote(lead.id, noteContent, 'user-ai');
-            // addNote already creates a history item, so we don't need a duplicate one here.
         }
     }
     return triggered;

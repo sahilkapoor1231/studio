@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, MessageSquare, PlusCircle, Tag, Trash2, Workflow } from 'lucide-react'
-import type { CustomFieldDefinition, PipelineStage, WorkflowRule, User, UpdateLeadFieldAction, AddTagAction } from '@/lib/types'
+import { ArrowRight, CaseSensitive, Filter, MessageSquare, PlusCircle, Tag, Trash2, Workflow } from 'lucide-react'
+import type { CustomFieldDefinition, PipelineStage, WorkflowRule, User, UpdateLeadFieldAction, AddTagAction, WorkflowCondition } from '@/lib/types'
 import { deleteCustomField, deleteWorkflow, deletePipelineStage } from '@/lib/data'
 import { AddCustomFieldDialog } from '@/components/settings/add-custom-field-dialog'
 import { AddStageDialog } from '@/components/settings/add-stage-dialog'
@@ -66,6 +66,26 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
             return users.find(u => u.id === action.value)?.name || action.value;
         }
         return action.value;
+    }
+
+    const renderCondition = (condition: WorkflowCondition) => {
+        const fieldMap = {
+            source: 'Source',
+            inquiryType: 'Inquiry Type',
+            status: 'Status',
+        }
+        const operatorMap = {
+            EQUALS: 'equals',
+            NOT_EQUALS: 'does not equal'
+        }
+        return (
+            <div key={condition.id} className="text-xs space-x-1">
+                <span>If</span>
+                <Badge variant="outline">{fieldMap[condition.field]}</Badge>
+                <span>{operatorMap[condition.operator]}</span>
+                <Badge variant="secondary">{condition.value}</Badge>
+            </div>
+        )
     }
 
     return (
@@ -161,18 +181,23 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                 <div className="text-center p-8 text-muted-foreground rounded-md border">No workflows created yet.</div>
                             ) : (
                                 workflows.map((rule) => (
-                                    <div key={rule.id} className="rounded-lg border bg-card p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <Workflow className="h-5 w-5 text-primary" />
-                                                <h4 className="font-semibold">{rule.name}</h4>
+                                    <div key={rule.id} className="rounded-lg border bg-card p-4 space-y-3">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <Workflow className="h-5 w-5 text-primary mt-1" />
+                                                <div>
+                                                    <h4 className="font-semibold">{rule.name}</h4>
+                                                    <p className="text-xs text-muted-foreground">Automation Rule</p>
+                                                </div>
                                             </div>
                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteWorkflow(rule.id)}>
                                                 <Trash2 className="h-4 w-4 text-destructive" /><span className="sr-only">Delete {rule.name}</span>
                                             </Button>
                                         </div>
-                                        <div className="mt-4 flex items-center justify-center gap-2 sm:gap-4 text-sm text-muted-foreground">
-                                            <div className="flex-1 rounded-md border p-3 text-center bg-background">
+
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-center gap-2 sm:gap-4 text-sm text-muted-foreground">
+                                            {/* WHEN */}
+                                            <div className="flex-1 rounded-md border p-3 text-center bg-background w-full">
                                                 <p className="font-medium text-foreground">WHEN</p>
                                                 {rule.trigger.type === 'LEAD_STATUS_CHANGED' ? (
                                                     <>
@@ -185,8 +210,22 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                                     </>
                                                 )}
                                             </div>
-                                            <ArrowRight className="h-6 w-6 shrink-0 text-muted-foreground" />
-                                            <div className="flex-1 rounded-md border p-3 text-center bg-background">
+
+                                            {/* IF */}
+                                            {rule.conditions && rule.conditions.length > 0 && (
+                                                <>
+                                                    <ArrowRight className="h-6 w-6 shrink-0 text-muted-foreground hidden sm:block" />
+                                                    <div className="flex-1 rounded-md border p-3 text-center bg-background space-y-2 w-full">
+                                                        <p className="font-medium text-foreground flex items-center justify-center gap-2">IF <Filter className="h-4 w-4" /></p>
+                                                        {rule.conditions.map(renderCondition)}
+                                                    </div>
+                                                </>
+                                            )}
+                                            
+                                            <ArrowRight className="h-6 w-6 shrink-0 text-muted-foreground hidden sm:block" />
+
+                                            {/* THEN */}
+                                            <div className="flex-1 rounded-md border p-3 text-center bg-background w-full">
                                                 <p className="font-medium text-foreground">THEN</p>
                                                 {rule.action.type === 'CREATE_TASK' ? (
                                                     <>

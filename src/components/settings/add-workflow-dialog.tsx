@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
@@ -25,11 +25,11 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { PipelineStage, WorkflowRule, WorkflowTriggerType, WorkflowAction, User } from "@/lib/types"
+import type { PipelineStage, WorkflowRule, WorkflowTriggerType, WorkflowAction, User, WorkflowCondition, WorkflowConditionField, WorkflowConditionOperator } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { addWorkflow } from "@/lib/data"
 import { Textarea } from "@/components/ui/textarea"
-import { HelpCircle } from "lucide-react"
+import { HelpCircle, PlusCircle, Trash2, X } from "lucide-react"
 
 function PlaceholderHelpDialog() {
     return (
@@ -91,10 +91,18 @@ function PlaceholderHelpDialog() {
     )
 }
 
+const conditionSchema = z.object({
+  id: z.string().optional(),
+  field: z.custom<WorkflowConditionField>(),
+  operator: z.custom<WorkflowConditionOperator>(),
+  value: z.string().min(1, "Value is required"),
+});
+
 const baseSchema = z.object({
   name: z.string().min(3, { message: "Workflow name must be at least 3 characters." }),
   triggerType: z.custom<WorkflowTriggerType>(),
   triggerValue: z.string().optional(),
+  conditions: z.array(conditionSchema),
 })
 
 const formSchema = z.discriminatedUnion("actionType", [
@@ -128,6 +136,9 @@ const formSchema = z.discriminatedUnion("actionType", [
 
 type AddWorkflowFormValues = z.infer<typeof formSchema>
 
+const leadSources = ['Website Form', 'Facebook Ad', 'Walk-in', 'IVR', 'WhatsApp'] as const;
+const inquiryTypes = ['General OPD', 'IVF Journey', 'Surgery Consultation'] as const;
+
 export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, users }: { children: React.ReactNode, onWorkflowAdded: (newWorkflow: WorkflowRule) => void, pipelineStages: PipelineStage[], users: User[] }) {
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
@@ -140,12 +151,19 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
       triggerValue: "",
       actionType: "CREATE_TASK",
       actionTemplate: "Follow up with {{lead.name}}",
+      conditions: [],
     },
   })
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "conditions",
+  });
 
   const triggerType = form.watch('triggerType');
   const actionType = form.watch('actionType');
   const actionField = form.watch('actionField');
+  const conditions = form.watch('conditions');
 
   async function onSubmit(values: AddWorkflowFormValues) {
     try {
@@ -164,6 +182,7 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
         const workflowData: Omit<WorkflowRule, 'id'> = {
             name: values.name,
             trigger: { type: values.triggerType },
+            conditions: values.conditions.map(c => ({...c, id: `cond-${Date.now()}`})),
             action: action
         }
         if (values.triggerType === 'LEAD_STATUS_CHANGED') {
@@ -186,19 +205,32 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
         })
     }
   }
+  
+  const getConditionValueOptions = (field: WorkflowConditionField) => {
+    switch (field) {
+      case 'source':
+        return leadSources;
+      case 'inquiryType':
+        return inquiryTypes;
+      case 'status':
+        return pipelineStages.map(s => s.name);
+      default:
+        return [];
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New Workflow</DialogTitle>
           <DialogDescription>
-            Automate actions based on triggers in your CRM.
+            Automate actions based on triggers and conditions in your CRM.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-6 pl-1">
             <FormField
               control={form.control}
               name="name"
@@ -258,6 +290,62 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                         )}
                     />
                 )}
+            </div>
+
+            <div className="rounded-md border p-4 space-y-4">
+                <h4 className="font-semibold text-sm">Conditions (IF)</h4>
+                {fields.map((item, index) => (
+                    <div key={item.id} className="flex items-end gap-2 p-2 border rounded-md bg-background">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 flex-1">
+                             <FormField
+                                control={form.control}
+                                name={`conditions.${index}.field`}
+                                render={({ field }) => (
+                                    <FormItem><FormLabel>Field</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Field" /></SelectTrigger></FormControl><SelectContent><SelectItem value="source">Source</SelectItem><SelectItem value="inquiryType">Inquiry Type</SelectItem><SelectItem value="status">Status</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name={`conditions.${index}.operator`}
+                                render={({ field }) => (
+                                    <FormItem><FormLabel>Operator</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Operator" /></SelectTrigger></FormControl><SelectContent><SelectItem value="EQUALS">Equals</SelectItem><SelectItem value="NOT_EQUALS">Not Equals</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name={`conditions.${index}.value`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Value</FormLabel>
+                                         <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Value" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {getConditionValueOptions(conditions[index]?.field).map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                    </div>
+                ))}
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append({ field: 'source', operator: 'EQUALS', value: '' })}
+                >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Condition
+                </Button>
             </div>
             
             <div className="rounded-md border p-4 space-y-4">
@@ -368,7 +456,7 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                 )}
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="pr-1 sticky bottom-0 bg-card-foreground/5 py-4 backdrop-blur-sm">
                 <DialogClose asChild>
                     <Button type="button" variant="secondary">Cancel</Button>
                 </DialogClose>
