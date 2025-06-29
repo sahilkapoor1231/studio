@@ -18,7 +18,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -30,6 +29,67 @@ import type { PipelineStage, WorkflowRule, WorkflowTriggerType, WorkflowAction, 
 import { useToast } from "@/hooks/use-toast"
 import { addWorkflow } from "@/lib/data"
 import { Textarea } from "@/components/ui/textarea"
+import { HelpCircle } from "lucide-react"
+
+function PlaceholderHelpDialog() {
+    return (
+         <Dialog>
+            <DialogTrigger asChild>
+                <HelpCircle className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-foreground" />
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Using Dynamic Placeholders in Workflows</DialogTitle>
+                    <DialogDescription>
+                        You can make your automated actions dynamic by inserting placeholders. These will be replaced with the lead's actual information when the workflow runs.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 text-sm max-h-[60vh] overflow-y-auto pr-4">
+                    <div>
+                        <h4 className="font-semibold mb-2">Available Placeholders</h4>
+                        <ul className="list-none space-y-2 text-muted-foreground bg-muted/50 p-3 rounded-md border">
+                            <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.name}}'}</code> - The full name of the lead.</li>
+                            <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.email}}'}</code> - The lead's email address.</li>
+                            <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.phone}}'}</code> - The lead's phone number.</li>
+                            <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.source}}'}</code> - Where the lead came from.</li>
+                            <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.inquiryType}}'}</code> - The type of inquiry.</li>
+                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.status}}'}</code> - The lead's current status.</li>
+                            <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.assignedTo.name}}'}</code> - Name of the assigned team member.</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h4 className="font-semibold mb-2">Example: Creating a Task</h4>
+                        <div className="p-3 rounded-md border space-y-2">
+                             <p className="text-muted-foreground">
+                                <strong>Template:</strong>
+                            </p>
+                             <pre className="text-xs bg-muted p-2 rounded-md">Follow up with {'{{lead.name}}'} about their {'{{inquiryType}}'} inquiry.</pre>
+                             <p className="text-muted-foreground">
+                                <strong>Result (for a lead named John Doe):</strong>
+                            </p>
+                             <pre className="text-xs bg-muted p-2 rounded-md">Follow up with John Doe about their IVF Journey inquiry.</pre>
+                        </div>
+                    </div>
+
+                     <div>
+                        <h4 className="font-semibold mb-2">Example: Adding a Note</h4>
+                         <div className="p-3 rounded-md border space-y-2">
+                             <p className="text-muted-foreground">
+                                <strong>Template:</strong>
+                            </p>
+                             <pre className="text-xs bg-muted p-2 rounded-md">Automated log: New lead from {'{{lead.source}}'} assigned to {'{{lead.assignedTo.name}}'}. Contact: {'{{lead.email}}'}.</pre>
+                             <p className="text-muted-foreground">
+                                <strong>Result (for a lead from 'Facebook Ad'):</strong>
+                            </p>
+                             <pre className="text-xs bg-muted p-2 rounded-md">Automated log: New lead from Facebook Ad assigned to Alex Carter. Contact: john.doe@example.com.</pre>
+                        </div>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 const baseSchema = z.object({
   name: z.string().min(3, { message: "Workflow name must be at least 3 characters." }),
@@ -216,13 +276,11 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                         name="actionTemplate"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Task Title</FormLabel>
-                                <FormControl><Input {...field} /></FormControl>
-                                <FormDescription>
-                                    Use placeholders like `{'{{lead.name}}'}` or `{'{{lead.email}}'}`.
-                                    <br />
-                                    E.g., "Follow up with {'{{lead.name}}'} about their {'{{lead.inquiryType}}'}."
-                                </FormDescription>
+                                <FormLabel className="flex items-center gap-2">
+                                    Task Title
+                                    <PlaceholderHelpDialog />
+                                </FormLabel>
+                                <FormControl><Input placeholder="e.g. Follow up with {{lead.name}}" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -235,16 +293,16 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                         name="actionTemplate"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Note Content</FormLabel>
+                                <FormLabel className="flex items-center gap-2">
+                                    Note Content
+                                    <PlaceholderHelpDialog />
+                                </FormLabel>
                                 <FormControl>
                                   <Textarea 
                                       placeholder="e.g., AI analysis initiated for {{lead.name}}."
                                       {...field}
                                   />
                                 </FormControl>
-                                <FormDescription>
-                                    Use placeholders like `{'{{lead.name}}'}`, `{'{{lead.source}}'}`, etc. to add dynamic content to your note.
-                                </FormDescription>
                                 <FormMessage />
                             </FormItem>
                         )}
