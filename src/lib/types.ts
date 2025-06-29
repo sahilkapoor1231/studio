@@ -105,7 +105,12 @@ export type AddTagAction = {
     tag: string;
 };
 
-export type WorkflowAction = CreateTaskAction | UpdateLeadFieldAction | AddTagAction;
+export type AddNoteAction = {
+    type: 'ADD_NOTE';
+    template: string;
+};
+
+export type WorkflowAction = CreateTaskAction | UpdateLeadFieldAction | AddTagAction | AddNoteAction;
 
 export type WorkflowRule = {
     id: string;

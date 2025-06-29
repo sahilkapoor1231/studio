@@ -157,6 +157,11 @@ const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promi
                 await addHistoryItem(lead.id, `Workflow "${rule.name}" added tag "${rule.action.tag}".`, 'user-ai');
                 triggered = true;
             }
+        } else if (rule.action.type === 'ADD_NOTE') {
+            const noteContent = applyTemplate(rule.action.template, lead);
+            await addNote(lead.id, noteContent, 'user-ai');
+            // addNote already creates a history item, so we don't need a duplicate one here.
+            triggered = true;
         }
     }
     return triggered;
@@ -263,7 +268,10 @@ export const addNote = async (leadId: string, noteContent: string, userId: strin
         content: noteContent
     };
     lead.notes.unshift(newNote);
-    await addHistoryItem(leadId, `Added a note.`, userId);
+    const historyAction = userId === 'user-ai' 
+        ? `Workflow added a note: "${noteContent.substring(0, 50)}..."` 
+        : `Added a note.`;
+    await addHistoryItem(leadId, historyAction, userId);
     return newNote;
 }
 

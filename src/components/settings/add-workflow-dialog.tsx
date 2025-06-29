@@ -50,6 +50,10 @@ const formSchema = z.discriminatedUnion("actionType", [
         actionType: z.literal("ADD_TAG"),
         actionTag: z.string().min(2, { message: "Tag is required" }),
     }),
+    z.object({
+        actionType: z.literal("ADD_NOTE"),
+        actionTemplate: z.string().min(3, { message: "Note template is required." }),
+    }),
 ]).and(baseSchema)
 .refine(data => {
     if (data.triggerType === 'LEAD_STATUS_CHANGED') {
@@ -87,28 +91,18 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
         let action: WorkflowAction;
 
         if (values.actionType === 'CREATE_TASK') {
-            action = {
-                type: 'CREATE_TASK',
-                template: values.actionTemplate,
-            };
+            action = { type: 'CREATE_TASK', template: values.actionTemplate };
         } else if (values.actionType === 'UPDATE_LEAD_FIELD') {
-            action = {
-                type: 'UPDATE_LEAD_FIELD',
-                field: values.actionField,
-                value: values.actionValue,
-            };
+            action = { type: 'UPDATE_LEAD_FIELD', field: values.actionField, value: values.actionValue };
+        } else if (values.actionType === 'ADD_TAG') {
+             action = { type: 'ADD_TAG', tag: values.actionTag };
         } else {
-             action = {
-                type: 'ADD_TAG',
-                tag: values.actionTag,
-            };
+             action = { type: 'ADD_NOTE', template: values.actionTemplate };
         }
 
         const workflowData: Omit<WorkflowRule, 'id'> = {
             name: values.name,
-            trigger: {
-                type: values.triggerType,
-            },
+            trigger: { type: values.triggerType },
             action: action
         }
         if (values.triggerType === 'LEAD_STATUS_CHANGED') {
@@ -211,7 +205,7 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                     control={form.control}
                     name="actionType"
                     render={({ field }) => (
-                        <FormItem><FormLabel>Action</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select an action" /></SelectTrigger></FormControl><SelectContent><SelectItem value="CREATE_TASK">Create Task</SelectItem><SelectItem value="UPDATE_LEAD_FIELD">Update Lead Field</SelectItem><SelectItem value="ADD_TAG">Add Tag</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Action</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select an action" /></SelectTrigger></FormControl><SelectContent><SelectItem value="CREATE_TASK">Create Task</SelectItem><SelectItem value="UPDATE_LEAD_FIELD">Update Lead Field</SelectItem><SelectItem value="ADD_TAG">Add Tag</SelectItem><SelectItem value="ADD_NOTE">Add Note</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                     )}
                 />
 
@@ -222,6 +216,21 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Task Title</FormLabel>
+                                <FormControl><Input {...field} /></FormControl>
+                                <FormDescription>Placeholders: {'{{lead.name}}'}, {'{{lead.inquiryType}}'}</FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
+
+                {actionType === 'ADD_NOTE' && (
+                     <FormField
+                        control={form.control}
+                        name="actionTemplate"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Note Content</FormLabel>
                                 <FormControl><Input {...field} /></FormControl>
                                 <FormDescription>Placeholders: {'{{lead.name}}'}, {'{{lead.inquiryType}}'}</FormDescription>
                                 <FormMessage />
