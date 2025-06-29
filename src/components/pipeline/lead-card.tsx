@@ -30,7 +30,7 @@ export function LeadCard({ lead, isOverlay }: { lead: Lead, isOverlay?: boolean 
             className={`mb-4 touch-none ${isOverlay ? 'shadow-2xl' : ''}`}
         >
             <CardHeader className="p-4 pb-2">
-                <Link href={`/leads/${lead.id}`}>
+                <Link href={`/leads/${lead.id}`} draggable={false}>
                     <CardTitle className="text-base hover:underline">{lead.name}</CardTitle>
                 </Link>
             </CardHeader>
