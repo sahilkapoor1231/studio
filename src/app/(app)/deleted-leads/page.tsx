@@ -20,14 +20,14 @@ export default async function DeletedLeadsPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Recycle Bin</h1>
         <p className="text-muted-foreground">
-          This log shows leads that have been deleted. These records are for auditing purposes only.
+          This is a permanent, read-only log of all deleted leads. Records here are for auditing purposes and cannot be restored or modified.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Deleted Leads</CardTitle>
-          <CardDescription>A list of all deleted leads from the system.</CardDescription>
+          <CardTitle>Deleted Leads Log</CardTitle>
+          <CardDescription>A list of all deleted lead records from the system.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -50,13 +50,7 @@ export default async function DeletedLeadsPage() {
               {deletedLeads.map((lead) => (
                 <TableRow key={lead.id}>
                   <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="hidden h-9 w-9 sm:flex">
-                        <AvatarImage src={lead.photoUrl} alt={lead.name} data-ai-hint="person face"/>
-                        <AvatarFallback>{lead.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div className="font-medium">{lead.name}</div>
-                    </div>
+                    {lead.name}
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary">{lead.status}</Badge>

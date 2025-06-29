@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 export default async function LeadProfilePage({ params }: { params: { id: string } }) {
   const lead = await getLeadById(params.id)
 
-  if (!lead) {
+  if (!lead || lead.deletedAt) {
     notFound()
   }
 

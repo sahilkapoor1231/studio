@@ -163,10 +163,9 @@ export function LeadTable({ leads, onLeadUpdated, onLeadDeleted }: { leads: Lead
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                               <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                      This action will move the lead for "{lead.name}" to the recycle bin.
-                                      You can view deleted leads in the Recycle Bin page.
+                                      This action cannot be undone. This will permanently delete the lead record for "{lead.name}".
                                   </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
