@@ -17,7 +17,7 @@ import { AddLeadDialog } from './add-lead-dialog'
 
 export function AppHeader() {
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
+    <header className="flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
       <SidebarTrigger className="md:hidden" />
       <div className="hidden md:block">
         <h1 className="text-xl font-semibold tracking-tight">LeadFlow</h1>
