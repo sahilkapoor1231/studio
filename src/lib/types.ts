@@ -1,6 +1,7 @@
 export type User = {
   id: string;
   name: string;
+  email: string;
   avatarUrl: string;
   role: 'Admin' | 'Counselor' | 'Receptionist' | 'Doctor';
 };

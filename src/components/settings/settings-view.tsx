@@ -3,15 +3,16 @@
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Filter, PlusCircle, Tag, Trash2, Workflow } from 'lucide-react'
+import { ArrowRight, Edit, Filter, PlusCircle, Tag, Trash2, UserPlus, Workflow } from 'lucide-react'
 import type { CustomFieldDefinition, PipelineStage, WorkflowRule, User, UpdateLeadFieldAction, WorkflowCondition } from '@/lib/types'
-import { deleteCustomField, deleteWorkflow, deletePipelineStage } from '@/lib/data'
+import { deleteCustomField, deleteWorkflow, deletePipelineStage, deleteUser } from '@/lib/data'
 import { AddCustomFieldDialog } from '@/components/settings/add-custom-field-dialog'
 import { AddStageDialog } from '@/components/settings/add-stage-dialog'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AddWorkflowDialog } from '@/components/settings/add-workflow-dialog'
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 
 interface SettingsViewProps {
     initialFields: CustomFieldDefinition[];
@@ -20,10 +21,11 @@ interface SettingsViewProps {
     users: User[];
 }
 
-export function SettingsView({ initialFields, initialStages, initialWorkflows, users }: SettingsViewProps) {
+export function SettingsView({ initialFields, initialStages, initialWorkflows, users: initialUsers }: SettingsViewProps) {
     const [fields, setFields] = useState<CustomFieldDefinition[]>(initialFields);
     const [stages, setStages] = useState<PipelineStage[]>(initialStages);
     const [workflows, setWorkflows] = useState<WorkflowRule[]>(initialWorkflows);
+    const [allUsers, setAllUsers] = useState<User[]>(initialUsers);
     const { toast } = useToast();
 
     const handleFieldAdded = (newField: CustomFieldDefinition) => setFields(prev => [...prev, newField]);
@@ -59,10 +61,20 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
             toast({ title: "Error", description: "Failed to delete workflow.", variant: "destructive" });
         }
     }
+    
+    const handleDeleteUser = async (userId: string) => {
+        const { success, message } = await deleteUser(userId);
+        if (success) {
+            setAllUsers(prev => prev.filter(u => u.id !== userId));
+            toast({ title: "User Deleted", description: "The user has been removed from the system." });
+        } else {
+             toast({ title: "Error", description: message || "Failed to delete user.", variant: "destructive" });
+        }
+    }
 
     const getActionDisplayValue = (action: UpdateLeadFieldAction) => {
         if (action.field === 'assignedToId') {
-            return users.find(u => u.id === action.value)?.name || action.value;
+            return initialUsers.find(u => u.id === action.value)?.name || action.value;
         }
         return action.value;
     }
@@ -90,10 +102,11 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
 
     return (
         <Tabs defaultValue="fields">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="fields">Custom Fields</TabsTrigger>
-                <TabsTrigger value="pipeline">Pipeline Stages</TabsTrigger>
+                <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
                 <TabsTrigger value="workflows">Workflows</TabsTrigger>
+                <TabsTrigger value="users">Users &amp; Roles</TabsTrigger>
             </TabsList>
 
             <TabsContent value="fields" className="mt-6">
@@ -171,7 +184,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                             <CardTitle>Workflow Automations</CardTitle>
                             <CardDescription>Create rules to automate repetitive tasks.</CardDescription>
                         </div>
-                        <AddWorkflowDialog onWorkflowAdded={handleWorkflowAdded} pipelineStages={stages} users={users}>
+                        <AddWorkflowDialog onWorkflowAdded={handleWorkflowAdded} pipelineStages={stages} users={initialUsers}>
                             <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Workflow</Button>
                         </AddWorkflowDialog>
                     </CardHeader>
@@ -254,6 +267,49 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                                     </>
                                                 ) : null}
                                             </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+
+            <TabsContent value="users" className="mt-6">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle>Users &amp; Roles</CardTitle>
+                            <CardDescription>Manage your team members and their access levels.</CardDescription>
+                        </div>
+                        <Button variant="outline"><UserPlus className="mr-2 h-4 w-4" /> Invite User</Button>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="rounded-md border">
+                            {allUsers.length === 0 ? (
+                                <div className="text-center p-8 text-muted-foreground">No users found.</div>
+                            ) : (
+                                allUsers.map((user, index) => (
+                                    <div key={user.id} className={`flex items-center justify-between p-4 ${index < allUsers.length - 1 ? 'border-b' : ''}`}>
+                                        <div className="flex items-center gap-4">
+                                            <Avatar>
+                                                <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="person face"/>
+                                                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <p className="font-medium">{user.name}</p>
+                                                <p className="text-sm text-muted-foreground">{user.email}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant="secondary">{user.role}</Badge>
+                                            <Button variant="ghost" size="icon">
+                                                <Edit className="h-4 w-4" /><span className="sr-only">Edit {user.name}</span>
+                                            </Button>
+                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)}>
+                                                <Trash2 className="h-4 w-4 text-destructive" /><span className="sr-only">Delete {user.name}</span>
+                                            </Button>
                                         </div>
                                     </div>
                                 ))

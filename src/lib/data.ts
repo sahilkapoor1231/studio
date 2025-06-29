@@ -15,11 +15,11 @@ declare global {
 
 // --- INITIAL DATA ---
 const initialUsers: User[] = [
-  { id: 'user-1', name: 'Dr. Evelyn Reed', avatarUrl: 'https://placehold.co/100x100/E8E8E8/4F4F4F.png', role: 'Doctor' },
-  { id: 'user-2', name: 'Alex Carter', avatarUrl: 'https://placehold.co/100x100/D9E8F5/4F4F4F.png', role: 'Counselor' },
-  { id: 'user-3', name: 'Mia Garcia', avatarUrl: 'https://placehold.co/100x100/F5D9E8/4F4F4F.png', role: 'Receptionist' },
-  { id: 'user-4', name: 'Sam Taylor', avatarUrl: 'https://placehold.co/100x100/E8F5D9/4F4F4F.png', role: 'Counselor' },
-  { id: 'user-ai', name: 'AI Assistant', avatarUrl: 'https://placehold.co/100x100/8A2BE2/FFFFFF.png', role: 'Admin'},
+  { id: 'user-1', name: 'Dr. Evelyn Reed', email: 'evelyn.reed@example.com', avatarUrl: 'https://placehold.co/100x100/E8E8E8/4F4F4F.png', role: 'Doctor' },
+  { id: 'user-2', name: 'Alex Carter', email: 'alex.carter@example.com', avatarUrl: 'https://placehold.co/100x100/D9E8F5/4F4F4F.png', role: 'Counselor' },
+  { id: 'user-3', name: 'Mia Garcia', email: 'mia.garcia@example.com', avatarUrl: 'https://placehold.co/100x100/F5D9E8/4F4F4F.png', role: 'Receptionist' },
+  { id: 'user-4', name: 'Sam Taylor', email: 'sam.taylor@example.com', avatarUrl: 'https://placehold.co/100x100/E8F5D9/4F4F4F.png', role: 'Counselor' },
+  { id: 'user-ai', name: 'AI Assistant', email: 'ai.assistant@example.com', avatarUrl: 'https://placehold.co/100x100/8A2BE2/FFFFFF.png', role: 'Admin'},
 ];
 
 const initialCustomFields: CustomFieldDefinition[] = [
@@ -254,6 +254,20 @@ export const updateLeadAssignment = async (leadId: string, newUserId: string): P
 export const getUsers = async (): Promise<User[]> => {
     await mockDelay(100);
     return [...users];
+}
+
+export const deleteUser = async (userId: string): Promise<{ success: boolean; message?: string }> => {
+    if (['user-2', 'user-ai'].includes(userId)) {
+        await mockDelay(100);
+        return { success: false, message: "This user is essential to the system and cannot be deleted." };
+    }
+    const index = users.findIndex(u => u.id === userId);
+    if (index > -1) {
+        users.splice(index, 1);
+        await mockDelay(100);
+        return { success: true };
+    }
+    return { success: false, message: "User not found." };
 }
 
 // --- TASK FUNCTIONS ---
