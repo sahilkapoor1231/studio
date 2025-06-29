@@ -1,6 +1,6 @@
 'use server'
 
-import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType, WorkflowAction } from './types';
+import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType, WorkflowAction, AddNoteAction, AddTagAction, CreateTaskAction, UpdateLeadFieldAction } from './types';
 import { subDays, formatISO, addDays } from 'date-fns';
 
 // This avoids issues with hot-reloading wiping out our data in development
@@ -61,7 +61,8 @@ const initialTasks: Task[] = [
 ];
 
 const initialWorkflows: WorkflowRule[] = [
-    { id: 'wf-1', name: 'Task on Appointment', trigger: { type: 'LEAD_STATUS_CHANGED', value: 'Appointment Scheduled'}, action: { type: 'CREATE_TASK', template: 'Prepare for {{lead.name}} appointment' } }
+    { id: 'wf-1', name: 'Task on Appointment', trigger: { type: 'LEAD_STATUS_CHANGED', value: 'Appointment Scheduled'}, action: { type: 'CREATE_TASK', template: 'Prepare for {{lead.name}} appointment' } },
+    { id: 'wf-2', name: 'Tag new website leads', trigger: { type: 'LEAD_CREATED' }, action: { type: 'ADD_TAG', tag: 'Website Lead' } }
 ]
 
 // --- DATABASE INITIALIZATION ---
@@ -112,10 +113,12 @@ const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promi
     const matchingWorkflows = workflows.filter(w => {
         if (w.trigger.type !== triggerType) return false;
         if (triggerType === 'LEAD_STATUS_CHANGED' && w.trigger.value !== lead.status) return false;
+        // For LEAD_CREATED, we might want to add sub-conditions in the future, e.g., only for a specific source
         return true;
     });
 
     for (const rule of matchingWorkflows) {
+        triggered = true; // Mark as triggered if at least one rule matches
         if (rule.action.type === 'CREATE_TASK') {
             const taskTitle = applyTemplate(rule.action.template, lead);
             await addTask({
@@ -125,7 +128,7 @@ const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promi
                 type: 'Call', // Default task type for workflows
             });
             await addHistoryItem(lead.id, `Workflow "${rule.name}" created a task: "${taskTitle}".`, 'user-ai');
-            triggered = true;
+            
         } else if (rule.action.type === 'UPDATE_LEAD_FIELD') {
             const { field, value } = rule.action;
             const leadToUpdate = leads.find(l => l.id === lead.id);
@@ -145,7 +148,6 @@ const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promi
                 if (actionTaken) {
                     const userDisplay = field === 'assignedToId' ? users.find(u => u.id === value)?.name : value;
                     await addHistoryItem(lead.id, `Workflow "${rule.name}" updated ${field} to "${userDisplay}".`, 'user-ai');
-                    triggered = true;
                     // Note: This could trigger other workflows. For a simple system this is okay.
                     // For a complex system, we'd need to prevent infinite loops.
                 }
@@ -154,14 +156,12 @@ const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promi
             const leadToUpdate = leads.find(l => l.id === lead.id);
             if (leadToUpdate && !leadToUpdate.tags.includes(rule.action.tag)) {
                 leadToUpdate.tags.push(rule.action.tag);
-                await addHistoryItem(lead.id, `Workflow "${rule.name}" added tag "${rule.action.tag}".`, 'user-ai');
-                triggered = true;
+                await addHistoryItem(lead.id, `Workflow "${rule.name}" added tag: "${rule.action.tag}".`, 'user-ai');
             }
         } else if (rule.action.type === 'ADD_NOTE') {
             const noteContent = applyTemplate(rule.action.template, lead);
             await addNote(lead.id, noteContent, 'user-ai');
             // addNote already creates a history item, so we don't need a duplicate one here.
-            triggered = true;
         }
     }
     return triggered;
