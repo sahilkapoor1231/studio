@@ -10,12 +10,13 @@ import { Badge } from '../ui/badge'
 import { Skeleton } from '../ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 
-export function AIInsights({ lead }: { lead: Lead }) {
+export function AIInsights({ lead, isReadOnly }: { lead: Lead, isReadOnly?: boolean }) {
     const [insights, setInsights] = useState<AIInsight | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     const handleGenerateInsights = async () => {
+        if (isReadOnly) return;
         setIsLoading(true)
         setError(null)
         try {
@@ -111,7 +112,7 @@ export function AIInsights({ lead }: { lead: Lead }) {
                 <p className="mt-1 text-sm text-muted-foreground">
                     Get a summary, lead temperature, and next steps powered by AI.
                 </p>
-                <Button onClick={handleGenerateInsights} className="mt-4" disabled={isLoading}>
+                <Button onClick={handleGenerateInsights} className="mt-4" disabled={isLoading || isReadOnly}>
                     <Sparkles className="mr-2 h-4 w-4" />
                     Generate Insights
                 </Button>

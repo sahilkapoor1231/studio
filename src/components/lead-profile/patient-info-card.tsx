@@ -29,7 +29,7 @@ import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 import { BookAppointmentDialog } from './book-appointment-dialog'
 
-export function PatientInfoCard({ lead }: { lead: Lead }) {
+export function PatientInfoCard({ lead, isReadOnly }: { lead: Lead, isReadOnly?: boolean }) {
   const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDefinition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -54,6 +54,7 @@ export function PatientInfoCard({ lead }: { lead: Lead }) {
     .filter(field => field.value !== undefined && field.value !== null && field.value !== '');
 
   const handleNoGo = async () => {
+    if (isReadOnly) return;
     setIsUpdating(true);
     try {
       await updateLeadStatus(lead.id, 'No Go');
@@ -156,11 +157,11 @@ export function PatientInfoCard({ lead }: { lead: Lead }) {
           </a>
         </Button>
         <BookAppointmentDialog lead={lead}>
-            <Button disabled={isUpdating}>
+            <Button disabled={isUpdating || isReadOnly}>
                 <CalendarPlus className="mr-2 h-4 w-4" /> Book Appt.
             </Button>
         </BookAppointmentDialog>
-        <Button variant="destructive" onClick={handleNoGo} disabled={isUpdating}>
+        <Button variant="destructive" onClick={handleNoGo} disabled={isUpdating || isReadOnly}>
           {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
           No Go
         </Button>

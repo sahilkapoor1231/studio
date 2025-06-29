@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { format, parseISO } from 'date-fns'
 import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
 
 export default async function DeletedLeadsPage() {
   const deletedLeads = await getDeletedLeads()
@@ -20,7 +21,7 @@ export default async function DeletedLeadsPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Recycle Bin</h1>
         <p className="text-muted-foreground">
-          This is a permanent, read-only log of all deleted leads. Records here are for auditing purposes and cannot be restored or modified.
+          This is a permanent log of all deleted leads. Records here are for auditing purposes and are read-only.
         </p>
       </div>
 
@@ -50,7 +51,9 @@ export default async function DeletedLeadsPage() {
               {deletedLeads.map((lead) => (
                 <TableRow key={lead.id}>
                   <TableCell>
-                    {lead.name}
+                    <Link href={`/leads/${lead.id}`} className="font-medium hover:underline">
+                      {lead.name}
+                    </Link>
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary">{lead.status}</Badge>

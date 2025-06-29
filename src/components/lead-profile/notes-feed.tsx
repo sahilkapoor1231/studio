@@ -11,7 +11,7 @@ import { User, Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { addNote } from '@/lib/data'
 
-export function NotesFeed({ notes, leadId }: { notes: Note[], leadId: string }) {
+export function NotesFeed({ notes, leadId, isReadOnly }: { notes: Note[], leadId: string, isReadOnly?: boolean }) {
   const [newNote, setNewNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
@@ -19,7 +19,7 @@ export function NotesFeed({ notes, leadId }: { notes: Note[], leadId: string }) 
 
   const handleNoteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newNote.trim()) return;
+    if (!newNote.trim() || isReadOnly) return;
 
     setIsSubmitting(true);
     try {
@@ -44,18 +44,20 @@ export function NotesFeed({ notes, leadId }: { notes: Note[], leadId: string }) 
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleNoteSubmit}>
-        <Textarea 
-          placeholder="Add an internal note... Use @ to mention a team member."
-          value={newNote}
-          onChange={(e) => setNewNote(e.target.value)}
-          disabled={isSubmitting}
-        />
-        <Button type="submit" className="mt-2" disabled={isSubmitting || !newNote.trim()}>
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Add Note
-        </Button>
-      </form>
+      {!isReadOnly && (
+        <form onSubmit={handleNoteSubmit}>
+            <Textarea 
+            placeholder="Add an internal note... Use @ to mention a team member."
+            value={newNote}
+            onChange={(e) => setNewNote(e.target.value)}
+            disabled={isSubmitting}
+            />
+            <Button type="submit" className="mt-2" disabled={isSubmitting || !newNote.trim()}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Add Note
+            </Button>
+        </form>
+      )}
       <div className="space-y-4">
         {notes.length === 0 && (
              <div className="text-center text-muted-foreground py-8">No notes added yet.</div>

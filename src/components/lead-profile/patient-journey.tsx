@@ -14,7 +14,7 @@ import { DocumentManager } from './document-manager'
 import { AIInsights } from './ai-insights'
 import { Sparkles } from 'lucide-react'
 
-export function PatientJourney({ lead }: { lead: Lead }) {
+export function PatientJourney({ lead, isReadOnly }: { lead: Lead, isReadOnly?: boolean }) {
   return (
     <Tabs defaultValue="journey" className="w-full">
       <TabsList className="grid w-full grid-cols-4">
@@ -36,19 +36,19 @@ export function PatientJourney({ lead }: { lead: Lead }) {
       <TabsContent value="notes">
         <Card>
           <CardContent className="pt-6">
-            <NotesFeed notes={lead.notes} leadId={lead.id} />
+            <NotesFeed notes={lead.notes} leadId={lead.id} isReadOnly={isReadOnly} />
           </CardContent>
         </Card>
       </TabsContent>
       <TabsContent value="documents">
         <Card>
           <CardContent className="pt-6">
-            <DocumentManager documents={lead.documents} />
+            <DocumentManager documents={lead.documents} isReadOnly={isReadOnly} />
           </CardContent>
         </Card>
       </TabsContent>
       <TabsContent value="ai">
-        <AIInsights lead={lead} />
+        <AIInsights lead={lead} isReadOnly={isReadOnly} />
       </TabsContent>
     </Tabs>
   )

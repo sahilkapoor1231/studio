@@ -208,10 +208,6 @@ export const getDeletedLeads = async (): Promise<Lead[]> => {
 export const getLeadById = async (id: string): Promise<Lead | undefined> => {
   await mockDelay(300);
   const lead = leads.find(lead => lead.id === id);
-  // Do not return lead if it has been deleted
-  if (lead && lead.deletedAt) {
-      return undefined;
-  }
   return lead;
 };
 
