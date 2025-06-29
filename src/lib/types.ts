@@ -100,7 +100,12 @@ export type UpdateLeadFieldAction = {
     value: string; // Will be a stage name or a user ID
 };
 
-export type WorkflowAction = CreateTaskAction | UpdateLeadFieldAction;
+export type AddTagAction = {
+    type: 'ADD_TAG';
+    tag: string;
+};
+
+export type WorkflowAction = CreateTaskAction | UpdateLeadFieldAction | AddTagAction;
 
 export type WorkflowRule = {
     id: string;

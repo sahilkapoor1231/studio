@@ -29,6 +29,10 @@ export default function DashboardPage() {
     setLeads(prev => [newLead, ...prev]);
   }
 
+  const handleLeadUpdated = (updatedLead: Lead) => {
+    setLeads(prev => prev.map(l => l.id === updatedLead.id ? updatedLead : l));
+  }
+
   const newLeadsCount = leads.filter(l => l.status === 'New').length;
   const qualifiedLeadsCount = leads.filter(l => l.status === 'Qualified').length;
   const convertedLeadsCount = leads.filter(l => l.status === 'Converted').length;
@@ -108,16 +112,16 @@ export default function DashboardPage() {
             <LeadFilters />
         </div>
         <TabsContent value="all" className="mt-4">
-          <LeadTable leads={leads} />
+          <LeadTable leads={leads} onLeadUpdated={handleLeadUpdated} />
         </TabsContent>
         <TabsContent value="new" className="mt-4">
-          <LeadTable leads={leads.filter(l => l.status === 'New')} />
+          <LeadTable leads={leads.filter(l => l.status === 'New')} onLeadUpdated={handleLeadUpdated} />
         </TabsContent>
          <TabsContent value="contacted" className="mt-4">
-          <LeadTable leads={leads.filter(l => l.status === 'Contacted')} />
+          <LeadTable leads={leads.filter(l => l.status === 'Contacted')} onLeadUpdated={handleLeadUpdated} />
         </TabsContent>
          <TabsContent value="qualified" className="mt-4">
-          <LeadTable leads={leads.filter(l => l.status === 'Qualified')} />
+          <LeadTable leads={leads.filter(l => l.status === 'Qualified')} onLeadUpdated={handleLeadUpdated} />
         </TabsContent>
       </Tabs>
     </div>

@@ -45,7 +45,11 @@ const formSchema = z.discriminatedUnion("actionType", [
         actionType: z.literal("UPDATE_LEAD_FIELD"),
         actionField: z.enum(["status", "assignedToId"]),
         actionValue: z.string({ required_error: "Please select a value." }).min(1, { message: "Please select a value." }),
-    })
+    }),
+    z.object({
+        actionType: z.literal("ADD_TAG"),
+        actionTag: z.string().min(2, { message: "Tag is required" }),
+    }),
 ]).and(baseSchema)
 .refine(data => {
     if (data.triggerType === 'LEAD_STATUS_CHANGED') {
@@ -87,11 +91,16 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                 type: 'CREATE_TASK',
                 template: values.actionTemplate,
             };
-        } else {
+        } else if (values.actionType === 'UPDATE_LEAD_FIELD') {
             action = {
                 type: 'UPDATE_LEAD_FIELD',
                 field: values.actionField,
                 value: values.actionValue,
+            };
+        } else {
+             action = {
+                type: 'ADD_TAG',
+                tag: values.actionTag,
             };
         }
 
@@ -202,7 +211,7 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                     control={form.control}
                     name="actionType"
                     render={({ field }) => (
-                        <FormItem><FormLabel>Action</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select an action" /></SelectTrigger></FormControl><SelectContent><SelectItem value="CREATE_TASK">Create Task</SelectItem><SelectItem value="UPDATE_LEAD_FIELD">Update Lead Field</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Action</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select an action" /></SelectTrigger></FormControl><SelectContent><SelectItem value="CREATE_TASK">Create Task</SelectItem><SelectItem value="UPDATE_LEAD_FIELD">Update Lead Field</SelectItem><SelectItem value="ADD_TAG">Add Tag</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                     )}
                 />
 
@@ -264,6 +273,19 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                             />
                         )}
                     </>
+                )}
+                {actionType === 'ADD_TAG' && (
+                     <FormField
+                        control={form.control}
+                        name="actionTag"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Tag to Add</FormLabel>
+                                <FormControl><Input placeholder="e.g., High Priority" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                 )}
             </div>
 

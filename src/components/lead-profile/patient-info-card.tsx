@@ -27,6 +27,7 @@ import { getCustomFields, updateLeadStatus } from '@/lib/data'
 import { Skeleton } from '../ui/skeleton'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
+import { BookAppointmentDialog } from './book-appointment-dialog'
 
 export function PatientInfoCard({ lead }: { lead: Lead }) {
   const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDefinition[]>([]);
@@ -60,14 +61,15 @@ export function PatientInfoCard({ lead }: { lead: Lead }) {
         title: "Lead Status Updated",
         description: `${lead.name} has been marked as "No Go".`
       });
-      router.push('/dashboard');
+      router.refresh();
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to update lead status.",
         variant: "destructive"
       });
-      setIsUpdating(false);
+    } finally {
+        setIsUpdating(false);
     }
   }
 
@@ -153,9 +155,11 @@ export function PatientInfoCard({ lead }: { lead: Lead }) {
             <Phone className="mr-2 h-4 w-4" /> Call
           </a>
         </Button>
-        <Button disabled={isUpdating}>
-            <CalendarPlus className="mr-2 h-4 w-4" /> Book Appt.
-        </Button>
+        <BookAppointmentDialog lead={lead}>
+            <Button disabled={isUpdating}>
+                <CalendarPlus className="mr-2 h-4 w-4" /> Book Appt.
+            </Button>
+        </BookAppointmentDialog>
         <Button variant="destructive" onClick={handleNoGo} disabled={isUpdating}>
           {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
           No Go

@@ -24,6 +24,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { format, parseISO } from 'date-fns'
+import { ReassignLeadDialog } from './reassign-lead-dialog'
+import { ScheduleFollowUpDialog } from './schedule-follow-up-dialog'
 
 const statusColors: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
     'New': 'default',
@@ -34,7 +36,7 @@ const statusColors: { [key: string]: 'default' | 'secondary' | 'destructive' | '
     'Converted': 'default',
 };
 
-export function LeadTable({ leads }: { leads: Lead[] }) {
+export function LeadTable({ leads, onLeadUpdated }: { leads: Lead[], onLeadUpdated: (lead: Lead) => void }) {
   return (
     <Card>
       <CardHeader>
@@ -101,9 +103,19 @@ export function LeadTable({ leads }: { leads: Lead[] }) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem>View Profile</DropdownMenuItem>
-                      <DropdownMenuItem>Schedule Follow-up</DropdownMenuItem>
-                      <DropdownMenuItem>Reassign</DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/leads/${lead.id}`}>View Profile</Link>
+                      </DropdownMenuItem>
+                      <ScheduleFollowUpDialog lead={lead}>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                            Schedule Follow-up
+                        </DropdownMenuItem>
+                      </ScheduleFollowUpDialog>
+                      <ReassignLeadDialog lead={lead} onLeadUpdated={onLeadUpdated}>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                          Reassign
+                        </DropdownMenuItem>
+                      </ReassignLeadDialog>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-destructive">
                         Delete

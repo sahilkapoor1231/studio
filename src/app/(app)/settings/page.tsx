@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, PlusCircle, Trash2, Workflow } from 'lucide-react'
-import type { CustomFieldDefinition, PipelineStage, WorkflowRule, User, UpdateLeadFieldAction } from '@/lib/types'
+import { ArrowRight, PlusCircle, Tag, Trash2, Workflow } from 'lucide-react'
+import type { CustomFieldDefinition, PipelineStage, WorkflowRule, User, UpdateLeadFieldAction, AddTagAction } from '@/lib/types'
 import { getCustomFields, deleteCustomField, getWorkflows, deleteWorkflow, getPipelineStages, deletePipelineStage, getUsers } from '@/lib/data'
 import { AddCustomFieldDialog } from '@/components/settings/add-custom-field-dialog'
 import { AddStageDialog } from '@/components/settings/add-stage-dialog'
@@ -199,8 +199,16 @@ export default function SettingsPage() {
                                             <div className="mt-4 flex items-center justify-center gap-2 sm:gap-4 text-sm text-muted-foreground">
                                                 <div className="flex-1 rounded-md border p-3 text-center bg-background">
                                                     <p className="font-medium text-foreground">WHEN</p>
-                                                    <p className="mt-1 text-xs sm:text-sm">Lead status changes to</p>
-                                                    <Badge variant="secondary" className="mt-2">{rule.trigger.value}</Badge>
+                                                    {rule.trigger.type === 'LEAD_STATUS_CHANGED' ? (
+                                                        <>
+                                                            <p className="mt-1 text-xs sm:text-sm">Lead status changes to</p>
+                                                            <Badge variant="secondary" className="mt-2">{rule.trigger.value}</Badge>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <p className="mt-1 text-xs sm:text-sm">A new lead is created</p>
+                                                        </>
+                                                    )}
                                                 </div>
                                                 <ArrowRight className="h-6 w-6 shrink-0 text-muted-foreground" />
                                                 <div className="flex-1 rounded-md border p-3 text-center bg-background">
@@ -210,7 +218,7 @@ export default function SettingsPage() {
                                                             <p className="mt-1 text-xs sm:text-sm">Create a new task</p>
                                                             <code className="mt-2 text-xs bg-muted text-muted-foreground rounded px-2 py-1 block truncate">"{rule.action.template}"</code>
                                                         </>
-                                                    ) : (
+                                                    ) : rule.action.type === 'UPDATE_LEAD_FIELD' ? (
                                                         <>
                                                             <p className="mt-1 text-xs sm:text-sm">Update lead field</p>
                                                             <div className="mt-2 text-xs space-x-1">
@@ -220,7 +228,12 @@ export default function SettingsPage() {
                                                                 <Badge variant="secondary">{getActionDisplayValue(rule.action)}</Badge>
                                                             </div>
                                                         </>
-                                                    )}
+                                                    ) : rule.action.type === 'ADD_TAG' ? (
+                                                        <>
+                                                             <p className="mt-1 text-xs sm:text-sm">Add a tag</p>
+                                                            <Badge variant="outline" className="mt-2"><Tag className="mr-1 h-3 w-3" /> {rule.action.tag}</Badge>
+                                                        </>
+                                                    ) : null}
                                                 </div>
                                             </div>
                                         </div>

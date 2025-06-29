@@ -150,6 +150,13 @@ const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promi
                     // For a complex system, we'd need to prevent infinite loops.
                 }
             }
+        } else if (rule.action.type === 'ADD_TAG') {
+            const leadToUpdate = leads.find(l => l.id === lead.id);
+            if (leadToUpdate && !leadToUpdate.tags.includes(rule.action.tag)) {
+                leadToUpdate.tags.push(rule.action.tag);
+                await addHistoryItem(lead.id, `Workflow "${rule.name}" added tag "${rule.action.tag}".`, 'user-ai');
+                triggered = true;
+            }
         }
     }
     return triggered;
@@ -185,10 +192,10 @@ export const addLead = async (leadData: NewLeadPayload): Promise<Lead> => {
     return newLead;
 }
 
-export const updateLeadStatus = async (leadId: string, newStatus: string): Promise<{ success: boolean; workflowTriggered: boolean }> => {
+export const updateLeadStatus = async (leadId: string, newStatus: string): Promise<{ success: boolean; workflowTriggered: boolean, updatedLead: Lead | null }> => {
     const leadIndex = leads.findIndex(l => l.id === leadId);
     if (leadIndex === -1) {
-        return { success: false, workflowTriggered: false };
+        return { success: false, workflowTriggered: false, updatedLead: null };
     }
     
     leads[leadIndex].status = newStatus;
@@ -198,8 +205,21 @@ export const updateLeadStatus = async (leadId: string, newStatus: string): Promi
     await mockDelay(200);
     const workflowTriggered = await runWorkflows('LEAD_STATUS_CHANGED', lead);
     
-    return { success: true, workflowTriggered };
+    return { success: true, workflowTriggered, updatedLead: lead };
 }
+
+export const updateLeadAssignment = async (leadId: string, newUserId: string): Promise<Lead> => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) throw new Error("Lead not found");
+    const user = users.find(u => u.id === newUserId);
+    if (!user) throw new Error("User not found");
+    
+    lead.assignedTo = user;
+    await addHistoryItem(lead.id, `Lead reassigned to ${user.name}`, 'user-2'); // Assume current user is user-2
+    await mockDelay(100);
+    return lead;
+}
+
 
 // --- USER FUNCTIONS ---
 export const getUsers = async (): Promise<User[]> => {
@@ -217,6 +237,13 @@ export const addTask = async (taskData: Omit<Task, 'id' | 'status'>): Promise<Ta
     const newTask: Task = { id: `task-${Date.now()}`, status: 'Pending', ...taskData };
     tasks.unshift(newTask);
     await mockDelay(100);
+    
+    // Add history item to the lead
+    const lead = leads.find(l => l.id === taskData.lead.id);
+    if (lead) {
+        await addHistoryItem(lead.id, `Task created: "${taskData.title}"`, 'user-2'); // Assume current user
+    }
+
     return newTask;
 }
 
