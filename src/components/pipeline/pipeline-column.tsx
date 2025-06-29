@@ -15,13 +15,13 @@ export function PipelineColumn({ stage, leads, onLeadAdded }: { stage: PipelineS
 
     return (
         <div className="flex-1 min-w-[300px] flex flex-col">
-            <div className={`bg-muted/50 rounded-lg p-4 pt-3 flex flex-col flex-1 transition-colors ${isOver ? 'bg-accent/20' : ''}`}>
+            <div ref={setNodeRef} className={`bg-muted/50 rounded-lg p-4 pt-3 flex flex-col flex-1 transition-colors ${isOver ? 'bg-accent/20' : ''}`}>
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="font-semibold">{stage.name}</h2>
                     <span className="text-sm font-medium text-muted-foreground bg-background px-2 py-0.5 rounded-full">{leads.length}</span>
                 </div>
                 <ScrollArea className="flex-1">
-                    <div ref={setNodeRef} className="space-y-4 min-h-[100px] pr-3">
+                    <div className="space-y-4 min-h-[100px] pr-3">
                         {leads.map(lead => <LeadCard key={lead.id} lead={lead} />)}
                     </div>
                 </ScrollArea>
