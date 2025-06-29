@@ -273,6 +273,25 @@ export const deleteLead = async (leadId: string, userId: string): Promise<{ succ
     return { success: true };
 }
 
+export const restoreAndReassignLead = async (leadId: string, newUserId: string): Promise<Lead> => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) throw new Error("Lead not found");
+    const user = users.find(u => u.id === newUserId);
+    if (!user) throw new Error("User not found");
+    
+    // Restore the lead
+    delete lead.deletedAt;
+    delete lead.deletedBy;
+    
+    // Reassign and reset status
+    lead.assignedTo = user;
+    lead.status = 'New'; // Reset status to 'New' upon restoration.
+    
+    await addHistoryItem(lead.id, `Lead restored and reassigned to ${user.name}`, 'user-2'); // Assume current user is user-2
+    await mockDelay(100);
+    return { ...lead };
+}
+
 
 // --- USER FUNCTIONS ---
 export const getUsers = async (): Promise<User[]> => {
