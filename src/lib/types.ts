@@ -66,6 +66,8 @@ export type Lead = {
   documents: Document[];
   // Key is the custom field ID, value is the user-provided value.
   customFields?: Record<string, any>;
+  deletedAt?: string;
+  deletedBy?: User;
 };
 
 export type Task = {

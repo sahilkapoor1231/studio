@@ -10,6 +10,7 @@ import {
   LogOut,
   Settings,
   Sparkles,
+  Trash2,
 } from 'lucide-react'
 import {
   SidebarContent,
@@ -28,6 +29,7 @@ const menuItems = [
   { href: '/calendar', label: 'Calendar', icon: Calendar },
   { href: '/reports', label: 'Reports', icon: BarChart },
   { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/deleted-leads', label: 'Recycle Bin', icon: Trash2 },
 ];
 
 export function AppSidebar() {

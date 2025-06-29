@@ -10,6 +10,7 @@ import { LeadFilters } from "@/components/dashboard/lead-filters"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Lead } from "@/lib/types"
 import { AddLeadDialog } from "@/components/add-lead-dialog"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function DashboardPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -31,6 +32,10 @@ export default function DashboardPage() {
 
   const handleLeadUpdated = (updatedLead: Lead) => {
     setLeads(prev => prev.map(l => l.id === updatedLead.id ? updatedLead : l));
+  }
+
+  const handleLeadDeleted = (leadId: string) => {
+    setLeads(prev => prev.filter(l => l.id !== leadId));
   }
 
   const newLeadsCount = leads.filter(l => l.status === 'New').length;
@@ -63,67 +68,85 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{leads.length}</div>
-                <p className="text-xs text-muted-foreground">+20.1% from last month</p>
-            </CardContent>
-        </Card>
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">New Leads</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">+{newLeadsCount}</div>
-                <p className="text-xs text-muted-foreground">In the last 7 days</p>
-            </CardContent>
-        </Card>
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Qualified Leads</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{qualifiedLeadsCount}</div>
-                 <p className="text-xs text-muted-foreground">+12 since yesterday</p>
-            </CardContent>
-        </Card>
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Converted</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{convertedLeadsCount}</div>
-                <p className="text-xs text-muted-foreground">This month</p>
-            </CardContent>
-        </Card>
+        {isLoading ? (
+            <>
+              <Card><CardHeader><Skeleton className="h-5 w-3/4" /></CardHeader><CardContent><Skeleton className="h-7 w-1/2" /><Skeleton className="h-4 w-full mt-2" /></CardContent></Card>
+              <Card><CardHeader><Skeleton className="h-5 w-3/4" /></CardHeader><CardContent><Skeleton className="h-7 w-1/2" /><Skeleton className="h-4 w-full mt-2" /></CardContent></Card>
+              <Card><CardHeader><Skeleton className="h-5 w-3/4" /></CardHeader><CardContent><Skeleton className="h-7 w-1/2" /><Skeleton className="h-4 w-full mt-2" /></CardContent></Card>
+              <Card><CardHeader><Skeleton className="h-5 w-3/4" /></CardHeader><CardContent><Skeleton className="h-7 w-1/2" /><Skeleton className="h-4 w-full mt-2" /></CardContent></Card>
+            </>
+        ) : (
+          <>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{leads.length}</div>
+                    <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">New Leads</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">+{newLeadsCount}</div>
+                    <p className="text-xs text-muted-foreground">In the last 7 days</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Qualified Leads</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{qualifiedLeadsCount}</div>
+                    <p className="text-xs text-muted-foreground">+12 since yesterday</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Converted</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{convertedLeadsCount}</div>
+                    <p className="text-xs text-muted-foreground">This month</p>
+                </CardContent>
+            </Card>
+          </>
+        )}
       </div>
       
-      <Tabs defaultValue="all">
-        <div className="flex items-center justify-between">
-            <TabsList>
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="new">New</TabsTrigger>
-                <TabsTrigger value="contacted">Contacted</TabsTrigger>
-                <TabsTrigger value="qualified">Qualified</TabsTrigger>
-            </TabsList>
-            <LeadFilters />
-        </div>
-        <TabsContent value="all" className="mt-4">
-          <LeadTable leads={leads} onLeadUpdated={handleLeadUpdated} />
-        </TabsContent>
-        <TabsContent value="new" className="mt-4">
-          <LeadTable leads={leads.filter(l => l.status === 'New')} onLeadUpdated={handleLeadUpdated} />
-        </TabsContent>
-         <TabsContent value="contacted" className="mt-4">
-          <LeadTable leads={leads.filter(l => l.status === 'Contacted')} onLeadUpdated={handleLeadUpdated} />
-        </TabsContent>
-         <TabsContent value="qualified" className="mt-4">
-          <LeadTable leads={leads.filter(l => l.status === 'Qualified')} onLeadUpdated={handleLeadUpdated} />
-        </TabsContent>
-      </Tabs>
+      {isLoading ? (
+        <Card>
+          <CardHeader><Skeleton className="h-10 w-1/3" /></CardHeader>
+          <CardContent><Skeleton className="h-64 w-full" /></CardContent>
+        </Card>
+      ) : (
+        <Tabs defaultValue="all">
+          <div className="flex items-center justify-between">
+              <TabsList>
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="new">New</TabsTrigger>
+                  <TabsTrigger value="contacted">Contacted</TabsTrigger>
+                  <TabsTrigger value="qualified">Qualified</TabsTrigger>
+              </TabsList>
+              <LeadFilters />
+          </div>
+          <TabsContent value="all" className="mt-4">
+            <LeadTable leads={leads} onLeadUpdated={handleLeadUpdated} onLeadDeleted={handleLeadDeleted} />
+          </TabsContent>
+          <TabsContent value="new" className="mt-4">
+            <LeadTable leads={leads.filter(l => l.status === 'New')} onLeadUpdated={handleLeadUpdated} onLeadDeleted={handleLeadDeleted} />
+          </TabsContent>
+          <TabsContent value="contacted" className="mt-4">
+            <LeadTable leads={leads.filter(l => l.status === 'Contacted')} onLeadUpdated={handleLeadUpdated} onLeadDeleted={handleLeadDeleted} />
+          </TabsContent>
+          <TabsContent value="qualified" className="mt-4">
+            <LeadTable leads={leads.filter(l => l.status === 'Qualified')} onLeadUpdated={handleLeadUpdated} onLeadDeleted={handleLeadDeleted} />
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   )
 }

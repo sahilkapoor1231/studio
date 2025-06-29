@@ -195,12 +195,24 @@ const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promi
 // --- LEAD FUNCTIONS ---
 export const getLeads = async (): Promise<Lead[]> => {
   await mockDelay(500);
-  return [...leads];
+  // Return only non-deleted leads
+  return [...leads].filter(lead => !lead.deletedAt);
 };
+
+export const getDeletedLeads = async (): Promise<Lead[]> => {
+    await mockDelay(500);
+    // Return only deleted leads, sorted by most recently deleted
+    return [...leads].filter(lead => !!lead.deletedAt).sort((a, b) => new Date(b.deletedAt!).getTime() - new Date(a.deletedAt!).getTime());
+}
 
 export const getLeadById = async (id: string): Promise<Lead | undefined> => {
   await mockDelay(300);
-  return leads.find(lead => lead.id === id);
+  const lead = leads.find(lead => lead.id === id);
+  // Do not return lead if it has been deleted
+  if (lead && lead.deletedAt) {
+      return undefined;
+  }
+  return lead;
 };
 
 export const addLead = async (leadData: NewLeadPayload): Promise<Lead> => {
@@ -223,7 +235,7 @@ export const addLead = async (leadData: NewLeadPayload): Promise<Lead> => {
 }
 
 export const updateLeadStatus = async (leadId: string, newStatus: string): Promise<{ success: boolean; workflowTriggered: boolean, updatedLead: Lead | null }> => {
-    const leadIndex = leads.findIndex(l => l.id === leadId);
+    const leadIndex = leads.findIndex(l => l.id === leadId && !l.deletedAt);
     if (leadIndex === -1) {
         return { success: false, workflowTriggered: false, updatedLead: null };
     }
@@ -239,7 +251,7 @@ export const updateLeadStatus = async (leadId: string, newStatus: string): Promi
 }
 
 export const updateLeadAssignment = async (leadId: string, newUserId: string): Promise<Lead> => {
-    const lead = leads.find(l => l.id === leadId);
+    const lead = leads.find(l => l.id === leadId && !l.deletedAt);
     if (!lead) throw new Error("Lead not found");
     const user = users.find(u => u.id === newUserId);
     if (!user) throw new Error("User not found");
@@ -248,6 +260,21 @@ export const updateLeadAssignment = async (leadId: string, newUserId: string): P
     await addHistoryItem(lead.id, `Lead reassigned to ${user.name}`, 'user-2'); // Assume current user is user-2
     await mockDelay(100);
     return lead;
+}
+
+export const deleteLead = async (leadId: string, userId: string): Promise<{ success: boolean }> => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return { success: false };
+
+    const user = users.find(u => u.id === userId);
+    if (!user) return { success: false };
+
+    lead.deletedAt = new Date().toISOString();
+    lead.deletedBy = user;
+
+    await addHistoryItem(leadId, 'Lead deleted', userId);
+    await mockDelay(200);
+    return { success: true };
 }
 
 

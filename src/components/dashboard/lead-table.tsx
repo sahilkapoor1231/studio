@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import {
   Table,
   TableBody,
@@ -12,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Lead } from '@/lib/types'
 import Link from 'next/link'
-import { MoreHorizontal } from 'lucide-react'
+import { MoreHorizontal, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -26,6 +27,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { format, parseISO } from 'date-fns'
 import { ReassignLeadDialog } from './reassign-lead-dialog'
 import { ScheduleFollowUpDialog } from './schedule-follow-up-dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useToast } from '@/hooks/use-toast'
+import { deleteLead } from '@/lib/data'
 
 const statusColors: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
     'New': 'default',
@@ -36,7 +50,27 @@ const statusColors: { [key: string]: 'default' | 'secondary' | 'destructive' | '
     'Converted': 'default',
 };
 
-export function LeadTable({ leads, onLeadUpdated }: { leads: Lead[], onLeadUpdated: (lead: Lead) => void }) {
+export function LeadTable({ leads, onLeadUpdated, onLeadDeleted }: { leads: Lead[], onLeadUpdated: (lead: Lead) => void, onLeadDeleted: (leadId: string) => void }) {
+  const { toast } = useToast()
+  
+  const handleDelete = async (leadId: string) => {
+    try {
+      // In a real app, the current user ID would come from auth context
+      await deleteLead(leadId, 'user-2'); 
+      onLeadDeleted(leadId);
+      toast({
+        title: "Lead Deleted",
+        description: "The lead has been moved to the recycle bin.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Could not delete lead. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -117,9 +151,35 @@ export function LeadTable({ leads, onLeadUpdated }: { leads: Lead[], onLeadUpdat
                         </DropdownMenuItem>
                       </ReassignLeadDialog>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive">
-                        Delete
-                      </DropdownMenuItem>
+                      <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                              <DropdownMenuItem
+                                  onSelect={(e) => e.preventDefault()}
+                                  className="text-destructive focus:bg-destructive/10"
+                              >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                              </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                              <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                      This action will move the lead for "{lead.name}" to the recycle bin.
+                                      You can view deleted leads in the Recycle Bin page.
+                                  </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                      onClick={() => handleDelete(lead.id)}
+                                      className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                  >
+                                      Delete
+                                  </AlertDialogAction>
+                              </AlertDialogFooter>
+                          </AlertDialogContent>
+                      </AlertDialog>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
