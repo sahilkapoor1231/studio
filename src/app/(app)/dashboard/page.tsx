@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Download, PlusCircle, Upload } from "lucide-react"
 import { LeadTable } from "@/components/dashboard/lead-table"
@@ -13,34 +14,60 @@ import { AddLeadDialog } from "@/components/add-lead-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function DashboardPage() {
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [allLeads, setAllLeads] = useState<Lead[]>([]);
+  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get('q');
 
   useEffect(() => {
     async function loadLeads() {
       setIsLoading(true);
       const initialLeads = await getLeads();
-      setLeads(initialLeads);
+      setAllLeads(initialLeads);
       setIsLoading(false);
     }
     loadLeads();
   }, [])
 
+  useEffect(() => {
+    if (searchQuery) {
+      const lowercasedQuery = searchQuery.toLowerCase();
+      const results = allLeads.filter(lead => 
+        lead.name.toLowerCase().includes(lowercasedQuery) ||
+        lead.email.toLowerCase().includes(lowercasedQuery) ||
+        lead.phone.includes(searchQuery) // phone is not always case-insensitive
+      );
+      setFilteredLeads(results);
+    } else {
+      setFilteredLeads(allLeads);
+    }
+  }, [searchQuery, allLeads]);
+
   const handleLeadAdded = (newLead: Lead) => {
-    setLeads(prev => [newLead, ...prev]);
+    const updatedLeads = [newLead, ...allLeads];
+    setAllLeads(updatedLeads);
+    setFilteredLeads(updatedLeads);
   }
 
   const handleLeadUpdated = (updatedLead: Lead) => {
-    setLeads(prev => prev.map(l => l.id === updatedLead.id ? updatedLead : l));
+    const updatedLeads = allLeads.map(l => l.id === updatedLead.id ? updatedLead : l)
+    setAllLeads(updatedLeads);
+    setFilteredLeads(updatedLeads);
   }
 
   const handleLeadDeleted = (leadId: string) => {
-    setLeads(prev => prev.filter(l => l.id !== leadId));
+    const updatedLeads = allLeads.filter(l => l.id !== leadId)
+    setAllLeads(updatedLeads);
+    setFilteredLeads(updatedLeads);
   }
 
-  const newLeadsCount = leads.filter(l => l.status === 'New').length;
-  const qualifiedLeadsCount = leads.filter(l => l.status === 'Qualified').length;
-  const convertedLeadsCount = leads.filter(l => l.status === 'Converted').length;
+  const leadsForStats = allLeads;
+  const newLeadsCount = leadsForStats.filter(l => l.status === 'New').length;
+  const qualifiedLeadsCount = leadsForStats.filter(l => l.status === 'Qualified').length;
+  const convertedLeadsCount = leadsForStats.filter(l => l.status === 'Converted').length;
+
+  const currentLeads = searchQuery ? filteredLeads : allLeads;
 
   return (
     <div className="space-y-6">
@@ -82,7 +109,7 @@ export default function DashboardPage() {
                     <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{leads.length}</div>
+                    <div className="text-2xl font-bold">{leadsForStats.length}</div>
                     <p className="text-xs text-muted-foreground">+20.1% from last month</p>
                 </CardContent>
             </Card>
@@ -134,16 +161,16 @@ export default function DashboardPage() {
               <LeadFilters />
           </div>
           <TabsContent value="all" className="mt-4">
-            <LeadTable leads={leads} onLeadUpdated={handleLeadUpdated} onLeadDeleted={handleLeadDeleted} />
+            <LeadTable leads={currentLeads} onLeadUpdated={handleLeadUpdated} onLeadDeleted={handleLeadDeleted} />
           </TabsContent>
           <TabsContent value="new" className="mt-4">
-            <LeadTable leads={leads.filter(l => l.status === 'New')} onLeadUpdated={handleLeadUpdated} onLeadDeleted={handleLeadDeleted} />
+            <LeadTable leads={currentLeads.filter(l => l.status === 'New')} onLeadUpdated={handleLeadUpdated} onLeadDeleted={handleLeadDeleted} />
           </TabsContent>
           <TabsContent value="contacted" className="mt-4">
-            <LeadTable leads={leads.filter(l => l.status === 'Contacted')} onLeadUpdated={handleLeadUpdated} onLeadDeleted={handleLeadDeleted} />
+            <LeadTable leads={currentLeads.filter(l => l.status === 'Contacted')} onLeadUpdated={handleLeadUpdated} onLeadDeleted={handleLeadDeleted} />
           </TabsContent>
           <TabsContent value="qualified" className="mt-4">
-            <LeadTable leads={leads.filter(l => l.status === 'Qualified')} onLeadUpdated={handleLeadUpdated} onLeadDeleted={handleLeadDeleted} />
+            <LeadTable leads={currentLeads.filter(l => l.status === 'Qualified')} onLeadUpdated={handleLeadUpdated} onLeadDeleted={handleLeadDeleted} />
           </TabsContent>
         </Tabs>
       )}
