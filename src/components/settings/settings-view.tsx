@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Edit, Filter, PlusCircle, RotateCcw, Tag, Trash2, UserPlus, Workflow } from 'lucide-react'
-import type { CustomFieldDefinition, PipelineStage, WorkflowRule, User, UpdateLeadFieldAction, WorkflowCondition, RoundRobinRule } from '@/lib/types'
+import { ArrowRight, Edit, Filter, Mail, MessageSquare, PlusCircle, RotateCcw, Tag, Trash2, UserPlus, Workflow } from 'lucide-react'
+import type { CustomFieldDefinition, PipelineStage, WorkflowRule, User, UpdateLeadFieldAction, WorkflowCondition, RoundRobinRule, WorkflowAction } from '@/lib/types'
 import { deleteCustomField, deleteWorkflow, deletePipelineStage, deleteUser, updateWorkflowStatus, deleteRoundRobinRule } from '@/lib/data'
 import { AddCustomFieldDialog } from '@/components/settings/add-custom-field-dialog'
 import { AddStageDialog } from '@/components/settings/add-stage-dialog'
@@ -107,7 +107,7 @@ const CustomFieldItem = ({ field, level = 0, onFieldAdded, onFieldDelete }: { fi
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => onFieldDelete(field.id)}>Delete</AlertDialogAction>
+                                <AlertDialogAction onClick={() => onFieldDelete(field.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
@@ -143,10 +143,6 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
     const handleDeleteField = async (fieldId: string) => {
         const { success } = await deleteCustomField(fieldId);
         if (success) {
-            // Re-fetch or filter local state to reflect deletion of field and its children
-            const newFields = fields.filter(f => f.id !== fieldId && f.parentId !== fieldId); // simplistic, full re-fetch better
-            setFields(prev => prev.filter(f => f.id !== fieldId && f.parentId !== fieldId)) // temp fix
-            
             const fieldsToDelete = new Set<string>();
             const queue: string[] = [fieldId];
             fieldsToDelete.add(fieldId);
@@ -228,13 +224,13 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
     }
 
     const renderCondition = (condition: WorkflowCondition) => {
-        const fieldMap = {
+        const fieldMap: Record<string, string> = {
             source: 'Source',
             inquiryType: 'Inquiry Type',
             status: 'Status',
             stage: 'Stage',
         }
-        const operatorMap = {
+        const operatorMap: Record<string, string> = {
             EQUALS: 'equals',
             NOT_EQUALS: 'does not equal'
         }
@@ -247,6 +243,79 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
             </div>
         )
     }
+
+    const renderActionDetails = (action: WorkflowAction) => {
+        switch(action.type) {
+            case 'CREATE_TASK':
+                return (
+                     <>
+                        <p className="mt-1 text-xs sm:text-sm">Create a new task</p>
+                        <code className="mt-2 text-xs bg-muted text-muted-foreground rounded px-2 py-1 block truncate">"{action.template}"</code>
+                    </>
+                );
+            case 'UPDATE_LEAD_FIELD':
+                 return (
+                    <>
+                        <p className="mt-1 text-xs sm:text-sm">Update lead field</p>
+                        <div className="mt-2 text-xs space-x-1">
+                            <span>Set</span>
+                            <Badge variant="outline">{action.field === 'assignedToId' ? 'Assigned To' : 'Status'}</Badge>
+                            <span>to</span>
+                            <Badge variant="secondary">{getActionDisplayValue(action)}</Badge>
+                        </div>
+                    </>
+                );
+            case 'ADD_TAG':
+                 return (
+                    <>
+                         <p className="mt-1 text-xs sm:text-sm">Add a tag</p>
+                        <Badge variant="outline" className="mt-2"><Tag className="mr-1 h-3 w-3" /> {action.tag}</Badge>
+                    </>
+                );
+            case 'ADD_NOTE':
+                return (
+                    <>
+                        <p className="mt-1 text-xs sm:text-sm">Add a new note</p>
+                        <code className="mt-2 text-xs bg-muted text-muted-foreground rounded px-2 py-1 block truncate">"{action.template}"</code>
+                    </>
+                );
+            case 'SEND_EMAIL':
+                return (
+                    <>
+                        <p className="mt-1 text-xs sm:text-sm flex items-center justify-center gap-2"><Mail className="h-4 w-4" /> Send an Email</p>
+                        <div className="mt-2 text-xs space-y-1 text-left">
+                            <div className="flex">
+                                <span className="font-semibold w-12 shrink-0">To:</span>
+                                <code className="bg-muted text-muted-foreground rounded px-2 py-1 block truncate">"{action.recipient}"</code>
+                            </div>
+                            <div className="flex">
+                                <span className="font-semibold w-12 shrink-0">Body:</span>
+                                <code className="bg-muted text-muted-foreground rounded px-2 py-1 block truncate">"{action.template}"</code>
+                            </div>
+                        </div>
+                    </>
+                );
+            case 'SEND_WHATSAPP':
+                 return (
+                    <>
+                        <p className="mt-1 text-xs sm:text-sm flex items-center justify-center gap-2"><MessageSquare className="h-4 w-4" /> Send WhatsApp</p>
+                        <div className="mt-2 text-xs space-y-1 text-left">
+                             <div className="flex">
+                                <span className="font-semibold w-12 shrink-0">To:</span>
+                                <code className="bg-muted text-muted-foreground rounded px-2 py-1 block truncate">"{action.recipient}"</code>
+                            </div>
+                            <div className="flex">
+                                <span className="font-semibold w-12 shrink-0">Msg:</span>
+                                <code className="bg-muted text-muted-foreground rounded px-2 py-1 block truncate">"{action.template}"</code>
+                            </div>
+                        </div>
+                    </>
+                );
+            default:
+                return null;
+        }
+    }
+
 
     return (
         <Tabs defaultValue="fields">
@@ -302,9 +371,25 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                 stages.map((stage, index) => (
                                     <div key={stage.id} className={`flex items-center justify-between p-4 ${index < stages.length - 1 ? 'border-b' : ''}`}>
                                         <p className="font-medium">{stage.name}</p>
-                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteStage(stage.id)}>
-                                            <Trash2 className="h-4 w-4 text-destructive" /><span className="sr-only">Delete {stage.name}</span>
-                                        </Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon">
+                                                    <Trash2 className="h-4 w-4 text-destructive" /><span className="sr-only">Delete {stage.name}</span>
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This will permanently delete the "{stage.name}" stage. This action cannot be undone.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteStage(stage.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </div>
                                 ))
                             )}
@@ -348,9 +433,23 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                                     </div>
                                                 </div>
                                             </div>
-                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteWorkflow(rule.id)}>
-                                                <Trash2 className="h-4 w-4 text-destructive" /><span className="sr-only">Delete {rule.name}</span>
-                                            </Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon">
+                                                        <Trash2 className="h-4 w-4 text-destructive" /><span className="sr-only">Delete {rule.name}</span>
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>This will permanently delete the "{rule.name}" workflow. This action cannot be undone.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeleteWorkflow(rule.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
                                         </div>
 
                                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-center gap-2 sm:gap-4 text-sm text-muted-foreground">
@@ -385,32 +484,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                             {/* THEN */}
                                             <div className="flex-1 rounded-md border p-3 text-center bg-background w-full">
                                                 <p className="font-medium text-foreground">THEN</p>
-                                                {rule.action.type === 'CREATE_TASK' ? (
-                                                    <>
-                                                        <p className="mt-1 text-xs sm:text-sm">Create a new task</p>
-                                                        <code className="mt-2 text-xs bg-muted text-muted-foreground rounded px-2 py-1 block truncate">"{rule.action.template}"</code>
-                                                    </>
-                                                ) : rule.action.type === 'UPDATE_LEAD_FIELD' ? (
-                                                    <>
-                                                        <p className="mt-1 text-xs sm:text-sm">Update lead field</p>
-                                                        <div className="mt-2 text-xs space-x-1">
-                                                            <span>Set</span>
-                                                            <Badge variant="outline">{rule.action.field === 'assignedToId' ? 'Assigned To' : 'Status'}</Badge>
-                                                            <span>to</span>
-                                                            <Badge variant="secondary">{getActionDisplayValue(rule.action)}</Badge>
-                                                        </div>
-                                                    </>
-                                                ) : rule.action.type === 'ADD_TAG' ? (
-                                                    <>
-                                                         <p className="mt-1 text-xs sm:text-sm">Add a tag</p>
-                                                        <Badge variant="outline" className="mt-2"><Tag className="mr-1 h-3 w-3" /> {rule.action.tag}</Badge>
-                                                    </>
-                                                ) : rule.action.type === 'ADD_NOTE' ? (
-                                                    <>
-                                                        <p className="mt-1 text-xs sm:text-sm">Add a new note</p>
-                                                        <code className="mt-2 text-xs bg-muted text-muted-foreground rounded px-2 py-1 block truncate">"{rule.action.template}"</code>
-                                                    </>
-                                                ) : null}
+                                                {renderActionDetails(rule.action)}
                                             </div>
                                         </div>
                                     </div>
@@ -472,7 +546,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
                                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteUser(user.id)}>Delete</AlertDialogAction>
+                                                    <AlertDialogAction onClick={() => handleDeleteUser(user.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>
@@ -492,7 +566,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                             <CardTitle>Round Robin Assignment</CardTitle>
                             <CardDescription>Automatically distribute new leads from a source to multiple users.</CardDescription>
                         </div>
-                        <AddRoundRobinRuleDialog onRuleAdded={handleRoundRobinRuleAdded} users={initialUsers}>
+                        <AddRoundRobinRuleDialog onRuleAdded={handleRoundRobinRuleAdded} users={initialUsers.filter(u => u.role === 'Counselor' || u.role === 'Receptionist')}>
                              <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Rule</Button>
                         </AddRoundRobinRuleDialog>
                     </CardHeader>
@@ -548,7 +622,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
                                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteRoundRobinRule(rule.id)}>Delete</AlertDialogAction>
+                                                    <AlertDialogAction onClick={() => handleDeleteRoundRobinRule(rule.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction>
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>

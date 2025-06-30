@@ -116,7 +116,25 @@ export type AddNoteAction = {
     template: string;
 };
 
-export type WorkflowAction = CreateTaskAction | UpdateLeadFieldAction | AddTagAction | AddNoteAction;
+export type SendEmailAction = {
+    type: 'SEND_EMAIL';
+    recipient: string; // Can be an email address or a placeholder like {{lead.email}}
+    template: string; // The email body template
+};
+
+export type SendWhatsAppAction = {
+    type: 'SEND_WHATSAPP';
+    recipient: string; // Can be a phone number or a placeholder like {{lead.phone}}
+    template: string; // The message template
+};
+
+export type WorkflowAction = 
+    | CreateTaskAction 
+    | UpdateLeadFieldAction 
+    | AddTagAction 
+    | AddNoteAction
+    | SendEmailAction
+    | SendWhatsAppAction;
 
 export type WorkflowConditionField = 'source' | 'inquiryType' | 'status' | 'stage';
 export type WorkflowConditionOperator = 'EQUALS' | 'NOT_EQUALS';

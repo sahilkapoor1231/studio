@@ -134,7 +134,7 @@ const checkConditions = (lead: Lead, conditions: WorkflowCondition[]): boolean =
 
     // All conditions must be met (AND logic)
     for (const condition of conditions) {
-        const leadValue = lead[condition.field];
+        const leadValue = lead[condition.field as keyof Lead];
         const conditionValue = condition.value;
 
         if (condition.operator === 'EQUALS') {
@@ -205,6 +205,20 @@ const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promi
         } else if (rule.action.type === 'ADD_NOTE') {
             const noteContent = applyTemplate(rule.action.template, lead);
             await addNote(lead.id, noteContent, 'user-ai');
+        } else if (rule.action.type === 'SEND_EMAIL') {
+            const { recipient, template } = rule.action;
+            const finalRecipient = applyTemplate(recipient, lead);
+            const finalContent = applyTemplate(template, lead);
+            // Simulate sending email by adding to history and as a note
+            await addHistoryItem(lead.id, `Workflow "${rule.name}" simulated sending an email to "${finalRecipient}".`, 'user-ai');
+            await addNote(lead.id, `**Simulated Email Sent**\n**To:** ${finalRecipient}\n**Body:**\n${finalContent}`, 'user-ai');
+        } else if (rule.action.type === 'SEND_WHATSAPP') {
+            const { recipient, template } = rule.action;
+            const finalRecipient = applyTemplate(recipient, lead);
+            const finalContent = applyTemplate(template, lead);
+            // Simulate sending WhatsApp message
+            await addHistoryItem(lead.id, `Workflow "${rule.name}" simulated sending a WhatsApp message to "${finalRecipient}".`, 'user-ai');
+            await addNote(lead.id, `**Simulated WhatsApp Sent**\n**To:** ${finalRecipient}\n**Message:**\n${finalContent}`, 'user-ai');
         }
     }
     return triggered;
@@ -214,7 +228,7 @@ const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promi
 export const getLeads = async (): Promise<Lead[]> => {
   await mockDelay(500);
   // Return only non-deleted leads
-  return [...leads].filter(lead => !lead.deletedAt);
+  return [...leads].filter(lead => !lead.deletedAt).sort((a,b) => new Date(b.lastContacted).getTime() - new Date(a.lastContacted).getTime());
 };
 
 export const getDeletedLeads = async (): Promise<Lead[]> => {
@@ -422,7 +436,7 @@ export const addNote = async (leadId: string, noteContent: string, userId: strin
     };
     lead.notes.unshift(newNote);
     const historyAction = userId === 'user-ai' 
-        ? `Workflow added a note: "${noteContent.substring(0, 50)}..."` 
+        ? `Workflow added a note.`
         : `Added a note.`;
     await addHistoryItem(leadId, historyAction, userId);
     return newNote;
@@ -512,8 +526,8 @@ export const getWorkflows = async (): Promise<WorkflowRule[]> => {
   return [...workflows];
 }
 
-export const addWorkflow = async (rule: Omit<WorkflowRule, 'id'>): Promise<WorkflowRule> => {
-  const newRule = { ...rule, id: `wf_${Date.now()}` };
+export const addWorkflow = async (rule: Omit<WorkflowRule, 'id' | 'status'>): Promise<WorkflowRule> => {
+  const newRule = { ...rule, id: `wf_${Date.now()}`, status: 'active' as const };
   workflows.push(newRule);
   await mockDelay(100);
   return newRule;

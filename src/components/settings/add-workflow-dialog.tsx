@@ -29,7 +29,7 @@ import type { PipelineStage, WorkflowRule, WorkflowTriggerType, WorkflowAction, 
 import { useToast } from "@/hooks/use-toast"
 import { addWorkflow } from "@/lib/data"
 import { Textarea } from "@/components/ui/textarea"
-import { HelpCircle, PlusCircle, Trash2 } from "lucide-react"
+import { HelpCircle, Mail, MessageSquare, PlusCircle, Trash2 } from "lucide-react"
 
 function PlaceholderHelpDialog() {
     return (
@@ -74,16 +74,19 @@ function PlaceholderHelpDialog() {
                     </div>
 
                      <div>
-                        <h4 className="font-semibold mb-2">Example: Adding a Note</h4>
+                        <h4 className="font-semibold mb-2">Example: Sending an Email</h4>
                          <div className="p-3 rounded-md border space-y-2">
+                             <p className="text-muted-foreground">
+                                <strong>Recipient:</strong> <code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.email}}'}</code>
+                            </p>
                              <p className="text-muted-foreground">
                                 <strong>Template:</strong>
                             </p>
-                             <pre className="text-xs bg-muted p-2 rounded-md">Automated log: New lead from {'{{lead.source}}'} assigned to {'{{lead.assignedTo.name}}'}. Contact: {'{{lead.email}}'}.</pre>
+                             <pre className="text-xs bg-muted p-2 rounded-md">Hi {'{{lead.name}}'}, thanks for your inquiry. We will contact you shortly.</pre>
                              <p className="text-muted-foreground">
-                                <strong>Result (for a lead from 'Facebook Ad'):</strong>
+                                <strong>Result (for a lead named Jane):</strong>
                             </p>
-                             <pre className="text-xs bg-muted p-2 rounded-md">Automated log: New lead from Facebook Ad assigned to Alex Carter. Contact: john.doe@example.com.</pre>
+                             <pre className="text-xs bg-muted p-2 rounded-md">Hi Jane, thanks for your inquiry. We will contact you shortly.</pre>
                         </div>
                     </div>
                 </div>
@@ -123,6 +126,16 @@ const formSchema = z.discriminatedUnion("actionType", [
     z.object({
         actionType: z.literal("ADD_NOTE"),
         actionTemplate: z.string().min(3, { message: "Note template is required." }),
+    }),
+    z.object({
+        actionType: z.literal("SEND_EMAIL"),
+        actionRecipient: z.string().min(1, { message: "Recipient is required." }),
+        actionTemplate: z.string().min(1, { message: "Email body is required." }),
+    }),
+    z.object({
+        actionType: z.literal("SEND_WHATSAPP"),
+        actionRecipient: z.string().min(1, { message: "Recipient is required." }),
+        actionTemplate: z.string().min(1, { message: "Message is required." }),
     }),
 ]).and(baseSchema)
 .refine(data => {
@@ -177,11 +190,15 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
             action = { type: 'UPDATE_LEAD_FIELD', field: values.actionField, value: values.actionValue };
         } else if (values.actionType === 'ADD_TAG') {
              action = { type: 'ADD_TAG', tag: values.actionTag };
+        } else if (values.actionType === 'SEND_EMAIL') {
+            action = { type: 'SEND_EMAIL', recipient: values.actionRecipient, template: values.actionTemplate };
+        } else if (values.actionType === 'SEND_WHATSAPP') {
+            action = { type: 'SEND_WHATSAPP', recipient: values.actionRecipient, template: values.actionTemplate };
         } else {
              action = { type: 'ADD_NOTE', template: values.actionTemplate };
         }
 
-        const workflowData: Omit<WorkflowRule, 'id'> = {
+        const workflowData: Omit<WorkflowRule, 'id' | 'status'> = {
             name: values.name,
             trigger: { type: values.triggerType },
             conditions: values.conditions.map(c => ({...c, id: `cond-${Date.now()}`})),
@@ -328,7 +345,7 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {getConditionValueOptions(conditions[index]?.field).map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                                {getConditionValueOptions(conditions[index]?.field as WorkflowConditionField).map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
@@ -358,7 +375,7 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                     control={form.control}
                     name="actionType"
                     render={({ field }) => (
-                        <FormItem><FormLabel>Action</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select an action" /></SelectTrigger></FormControl><SelectContent><SelectItem value="CREATE_TASK">Create Task</SelectItem><SelectItem value="UPDATE_LEAD_FIELD">Update Lead Field</SelectItem><SelectItem value="ADD_TAG">Add Tag</SelectItem><SelectItem value="ADD_NOTE">Add Note</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Action</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select an action" /></SelectTrigger></FormControl><SelectContent><SelectItem value="CREATE_TASK">Create Task</SelectItem><SelectItem value="UPDATE_LEAD_FIELD">Update Lead Field</SelectItem><SelectItem value="ADD_TAG">Add Tag</SelectItem><SelectItem value="ADD_NOTE">Add Note</SelectItem><SelectItem value="SEND_EMAIL"><div className="flex items-center gap-2"><Mail/> Send Email</div></SelectItem><SelectItem value="SEND_WHATSAPP"><div className="flex items-center gap-2"><MessageSquare/> Send WhatsApp</div></SelectItem></SelectContent></Select><FormMessage /></FormItem>
                     )}
                 />
 
@@ -377,6 +394,41 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                             </FormItem>
                         )}
                     />
+                )}
+
+                {(actionType === 'SEND_EMAIL' || actionType === 'SEND_WHATSAPP') && (
+                    <>
+                        <FormField
+                            control={form.control}
+                            name="actionRecipient"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2">
+                                        Recipient
+                                        <PlaceholderHelpDialog />
+                                    </FormLabel>
+                                    <FormControl><Input placeholder={actionType === 'SEND_EMAIL' ? "e.g., {{lead.email}}" : "e.g., {{lead.phone}}"} {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="actionTemplate"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2">
+                                        {actionType === 'SEND_EMAIL' ? 'Email Body' : 'Message'}
+                                        <PlaceholderHelpDialog />
+                                    </FormLabel>
+                                    <FormControl>
+                                        <Textarea placeholder="e.g., Hi {{lead.name}}, confirming your appointment." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </>
                 )}
 
                 {actionType === 'ADD_NOTE' && (
