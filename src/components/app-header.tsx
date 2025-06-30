@@ -32,7 +32,18 @@ export function AppHeader() {
       const overdueTasks = allTasks.filter(t => t.status === 'Overdue')
       setNotifications(overdueTasks)
     }
+    
     loadNotifications()
+
+    const handleNotificationsUpdate = () => {
+      loadNotifications();
+    };
+
+    window.addEventListener('notifications-updated', handleNotificationsUpdate);
+
+    return () => {
+      window.removeEventListener('notifications-updated', handleNotificationsUpdate);
+    };
   }, [])
 
   useEffect(() => {

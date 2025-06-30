@@ -26,7 +26,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Textarea } from "@/components/ui/textarea"
-import { addTask, updateLeadStatus } from "@/lib/data"
+import { addTask, updateLeadStatus, getTasks, updateTaskStatus } from "@/lib/data"
 import type { Lead, Task } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { format, formatISO } from "date-fns"
@@ -64,11 +64,22 @@ export function BookAppointmentDialog({ children, lead }: { children: React.Reac
 
         await addTask(taskData);
         await updateLeadStatus(lead.id, 'Appointment Scheduled');
+
+        // Resolve any overdue tasks for this lead
+        const allTasks = await getTasks();
+        const overdueTasksForLead = allTasks.filter(
+            t => t.lead.id === lead.id && t.status === 'Overdue'
+        );
+
+        for (const task of overdueTasksForLead) {
+            await updateTaskStatus(task.id, 'Done');
+        }
         
         toast({
             title: "Appointment Booked",
             description: `An appointment has been scheduled for ${lead.name}.`,
         })
+        window.dispatchEvent(new CustomEvent('notifications-updated'));
         setOpen(false)
         router.refresh();
     } catch (error) {

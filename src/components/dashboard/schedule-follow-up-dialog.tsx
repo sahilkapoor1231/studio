@@ -73,6 +73,7 @@ export function ScheduleFollowUpDialog({ children, lead }: { children: React.Rea
             title: "Follow-up Scheduled",
             description: `A new task has been created for ${lead.name}.`,
         })
+        window.dispatchEvent(new CustomEvent('notifications-updated'));
         setOpen(false)
         router.refresh() // Refresh to show new task on calendar etc.
     } catch (error) {

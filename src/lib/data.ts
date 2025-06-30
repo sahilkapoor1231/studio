@@ -395,6 +395,16 @@ export const addTask = async (taskData: Omit<Task, 'id' | 'status'>): Promise<Ta
     return newTask;
 }
 
+export const updateTaskStatus = async (taskId: string, status: 'Pending' | 'Done' | 'Overdue'): Promise<Task | null> => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+        task.status = status;
+        await mockDelay(50);
+        return { ...task };
+    }
+    return null;
+}
+
 // --- NOTE & HISTORY FUNCTIONS ---
 export const addNote = async (leadId: string, noteContent: string, userId: string): Promise<Note> => {
     await mockDelay(100);
