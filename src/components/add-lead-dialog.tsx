@@ -25,12 +25,12 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getUsers, addLead, getCustomFields, getPipelineStages, addNote, addHistoryItem } from "@/lib/data"
+import { addLead, addNote, addHistoryItem } from "@/lib/data"
 import { summarizeLead } from '@/ai/flows/summarize-lead-flow'
-import type { Lead, User, CustomFieldDefinition, CustomFieldType, PipelineStage, NewLeadPayload, LeadStage } from "@/lib/types"
+import type { Lead, CustomFieldDefinition, CustomFieldType, NewLeadPayload, LeadStage } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { Separator } from "./ui/separator"
-import { Skeleton } from "./ui/skeleton"
+import { useAppContext } from "@/lib/app-context"
 
 const leadSources = ['Website Form', 'Facebook Ad', 'Walk-in', 'IVR', 'WhatsApp'] as const;
 const inquiryTypes = ['General OPD', 'IVF Journey', 'Surgery Consultation'] as const;
@@ -109,12 +109,11 @@ const buildFieldTree = (fields: CustomFieldDefinition[]): FieldWithChildren[] =>
 
 export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { children: React.ReactNode, onLeadAdded?: (newLead: Lead) => void, defaultStatus?: string }) {
   const [open, setOpen] = useState(false)
-  const [users, setUsers] = useState<User[]>([])
-  const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
-  const [pipelineStages, setPipelineStages] = useState<PipelineStage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast()
+  
+  // Get shared data from context instead of fetching it
+  const { assignableUsers, customFields, pipelineStages } = useAppContext();
 
   const finalSchema = useMemo(() => {
     return baseFormSchema.extend({
@@ -136,41 +135,26 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
     },
   })
 
+  // Reset form with default values when dialog opens
   useEffect(() => {
-    // Only fetch data when the dialog is opened
     if (!open) return;
-
-    async function fetchData() {
-      setIsLoading(true);
-      const [fetchedUsers, fetchedCustomFields, fetchedStages] = await Promise.all([
-        getUsers(),
-        getCustomFields(),
-        getPipelineStages()
-      ]);
-      setUsers(fetchedUsers.filter(u => u.role === 'Counselor' || u.role === 'Receptionist'));
-      setCustomFields(fetchedCustomFields);
-      setPipelineStages(fetchedStages);
       
-      const defaultCustomValues: Record<string, any> = {};
-      fetchedCustomFields.forEach(field => {
-        defaultCustomValues[field.id] = field.type === 'Number' ? undefined : '';
-      });
+    const defaultCustomValues: Record<string, any> = {};
+    customFields.forEach(field => {
+      defaultCustomValues[field.id] = field.type === 'Number' ? undefined : '';
+    });
 
-      // Reset the form with the latest data
-      form.reset({
-        name: "",
-        email: "",
-        phone: "",
-        source: "Website Form",
-        status: defaultStatus || fetchedStages[0]?.name,
-        inquiryType: "General OPD",
-        assignedToId: undefined,
-        customFields: defaultCustomValues,
-      });
-      setIsLoading(false);
-    }
-    fetchData();
-  }, [open, defaultStatus, form])
+    form.reset({
+      name: "",
+      email: "",
+      phone: "",
+      source: "Website Form",
+      status: defaultStatus || pipelineStages[0]?.name,
+      inquiryType: "General OPD",
+      assignedToId: undefined,
+      customFields: defaultCustomValues,
+    });
+  }, [open, defaultStatus, form, customFields, pipelineStages])
 
   async function onSubmit(values: AddLeadFormValues) {
     setIsSubmitting(true);
@@ -311,14 +295,6 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-6 pl-1">
-            { isLoading ? (
-                <div className="space-y-4">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                </div>
-            ) : (
                 <>
                     <FormField
                     control={form.control}
@@ -359,7 +335,7 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
                         control={form.control}
                         name="assignedToId"
                         render={({ field }) => (
-                            <FormItem><FormLabel>Assign To</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a team member" /></SelectTrigger></FormControl><SelectContent>{users.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Assign To</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a team member" /></SelectTrigger></FormControl><SelectContent>{assignableUsers.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
                         )}
                     />
 
@@ -375,13 +351,12 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
                         </>
                     )}
                 </>
-            )}
             
             <DialogFooter className="pr-1 sticky bottom-0 bg-background py-4">
                 <DialogClose asChild>
                     <Button type="button" variant="secondary">Cancel</Button>
                 </DialogClose>
-                <Button type="submit" disabled={isLoading || isSubmitting}>
+                <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? 'Creating...' : 'Create Lead'}
                 </Button>
             </DialogFooter>

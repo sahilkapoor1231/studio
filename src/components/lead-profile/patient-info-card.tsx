@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   Card,
   CardContent,
@@ -23,28 +23,20 @@ import {
   Loader2,
 } from 'lucide-react'
 import { Separator } from '../ui/separator'
-import { getCustomFields, updateLeadStatus } from '@/lib/data'
+import { updateLeadStatus } from '@/lib/data'
 import { Skeleton } from '../ui/skeleton'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 import { BookAppointmentDialog } from './book-appointment-dialog'
+import { useAppContext } from '@/lib/app-context'
 
 export function PatientInfoCard({ lead, isReadOnly }: { lead: Lead, isReadOnly?: boolean }) {
-  const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDefinition[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-
-  useEffect(() => {
-    async function loadDefs() {
-        setIsLoading(true);
-        const defs = await getCustomFields();
-        setCustomFieldDefs(defs);
-        setIsLoading(false);
-    }
-    loadDefs();
-  }, [])
+  
+  // Get custom fields from context, no more fetching
+  const { customFields: customFieldDefs } = useAppContext();
   
   const populatedCustomFields = customFieldDefs
     .map(def => ({
@@ -123,24 +115,17 @@ export function PatientInfoCard({ lead, isReadOnly }: { lead: Lead, isReadOnly?:
           )}
         </div>
 
-        {(isLoading || populatedCustomFields.length > 0) && (
+        {populatedCustomFields.length > 0 && (
           <>
             <Separator className="my-4" />
             <div className="space-y-3 text-sm">
                 <h4 className="font-medium flex items-center gap-2 text-muted-foreground"><Info className="h-4 w-4" /> Additional Details</h4>
-                {isLoading ? (
-                    <div className="space-y-2">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
+                {populatedCustomFields.map(({label, value}) => (
+                    <div key={label} className="flex justify-between items-center">
+                        <span className="font-medium text-muted-foreground">{label}:</span>
+                        <span className="text-right">{String(value)}</span>
                     </div>
-                ) : (
-                    populatedCustomFields.map(({label, value}) => (
-                        <div key={label} className="flex justify-between items-center">
-                            <span className="font-medium text-muted-foreground">{label}:</span>
-                            <span className="text-right">{String(value)}</span>
-                        </div>
-                    ))
-                )}
+                ))}
             </div>
           </>
         )}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -24,10 +24,10 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getUsers, updateLeadAssignment } from "@/lib/data"
-import type { Lead, User } from "@/lib/types"
+import { updateLeadAssignment } from "@/lib/data"
+import type { Lead } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
-import { Skeleton } from "../ui/skeleton"
+import { useAppContext } from "@/lib/app-context"
 
 const formSchema = z.object({
   assignedToId: z.string({ required_error: "Please select a team member." }),
@@ -37,10 +37,9 @@ type ReassignLeadFormValues = z.infer<typeof formSchema>;
 
 export function ReassignLeadDialog({ children, lead, onLeadUpdated }: { children: React.ReactNode, lead: Lead, onLeadUpdated: (lead: Lead) => void }) {
   const [open, setOpen] = useState(false)
-  const [users, setUsers] = useState<User[]>([])
-  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast()
+  const { assignableUsers } = useAppContext();
 
   const form = useForm<ReassignLeadFormValues>({
     resolver: zodResolver(formSchema),
@@ -49,23 +48,18 @@ export function ReassignLeadDialog({ children, lead, onLeadUpdated }: { children
     },
   })
 
-  useEffect(() => {
-    if (!open) return;
-
-    async function fetchUsers() {
-      setIsLoading(true);
-      const fetchedUsers = await getUsers();
-      setUsers(fetchedUsers.filter(u => u.role === 'Counselor' || u.role === 'Receptionist'));
-      setIsLoading(false);
+  // Reset form when dialog opens
+  useState(() => {
+    if (open) {
+      form.reset({ assignedToId: lead.assignedTo.id });
     }
-    fetchUsers();
-  }, [open])
+  })
 
   async function onSubmit(values: ReassignLeadFormValues) {
     setIsSubmitting(true);
     try {
         const updatedLead = await updateLeadAssignment(lead.id, values.assignedToId);
-        const assignedUser = users.find(u => u.id === values.assignedToId);
+        const assignedUser = assignableUsers.find(u => u.id === values.assignedToId);
         
         onLeadUpdated(updatedLead);
         toast({
@@ -97,36 +91,32 @@ export function ReassignLeadDialog({ children, lead, onLeadUpdated }: { children
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            { isLoading ? (
-                <Skeleton className="h-10 w-full" />
-            ) : (
-                <FormField
-                    control={form.control}
-                    name="assignedToId"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Assign To</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a team member" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {users.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            )}
+            <FormField
+                control={form.control}
+                name="assignedToId"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Assign To</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a team member" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {assignableUsers.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
             
             <DialogFooter>
                 <DialogClose asChild>
                     <Button type="button" variant="secondary">Cancel</Button>
                 </DialogClose>
-                <Button type="submit" disabled={isLoading || isSubmitting}>
+                <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? 'Reassigning...' : 'Reassign Lead'}
                 </Button>
             </DialogFooter>
