@@ -18,7 +18,7 @@ const leadSources = ['Website Form', 'Facebook Ad', 'Walk-in', 'IVR', 'WhatsApp'
 
 const formSchema = z.object({
   name: z.string().min(3, "Rule name must be at least 3 characters."),
-  source: z.custom<LeadSource>({required_error: "Please select a source."}),
+  source: z.enum(leadSources, { required_error: "Please select a source." }),
   userIds: z.array(z.string()).refine(value => value.length >= 1, {
     message: "You must select at least one user.",
   }),
