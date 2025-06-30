@@ -139,3 +139,13 @@ export type WorkflowRule = {
     conditions: WorkflowCondition[];
     action: WorkflowAction;
 }
+
+// LEAD ASSIGNMENT TYPES
+export type RoundRobinRule = {
+    id: string;
+    name: string;
+    source: LeadSource;
+    userIds: string[];
+    // Index of the last user who received a lead.
+    lastAssignedUserIndex: number;
+};

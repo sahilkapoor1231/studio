@@ -1,6 +1,6 @@
 'use server'
 
-import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType, WorkflowAction, AddNoteAction, AddTagAction, CreateTaskAction, UpdateLeadFieldAction, WorkflowCondition, UserRole } from './types';
+import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType, WorkflowAction, AddNoteAction, AddTagAction, CreateTaskAction, UpdateLeadFieldAction, WorkflowCondition, UserRole, RoundRobinRule, LeadSource } from './types';
 import { subDays, formatISO, addDays } from 'date-fns';
 
 // This avoids issues with hot-reloading wiping out our data in development
@@ -11,6 +11,7 @@ declare global {
   var customFieldsDb: CustomFieldDefinition[] | undefined;
   var pipelineStagesDb: PipelineStage[] | undefined;
   var workflowsDb: WorkflowRule[] | undefined;
+  var roundRobinRulesDb: RoundRobinRule[] | undefined;
 }
 
 // --- INITIAL DATA ---
@@ -65,6 +66,16 @@ const initialWorkflows: WorkflowRule[] = [
     { id: 'wf-2', name: 'Tag new website leads', status: 'active', trigger: { type: 'LEAD_CREATED' }, conditions: [{id: 'cond-1', field: 'source', operator: 'EQUALS', value: 'Website Form'}], action: { type: 'ADD_TAG', tag: 'Website Lead' } }
 ]
 
+const initialRoundRobinRules: RoundRobinRule[] = [
+    {
+        id: 'rr-1',
+        name: 'Website Lead Distribution',
+        source: 'Website Form',
+        userIds: ['user-2', 'user-4'], // Alex Carter and Sam Taylor
+        lastAssignedUserIndex: -1, // Start with the first user
+    }
+];
+
 // --- DATABASE INITIALIZATION ---
 // Initialize in-memory DB only if it doesn't exist
 if (typeof global.usersDb === 'undefined') {
@@ -85,6 +96,9 @@ if (typeof global.pipelineStagesDb === 'undefined') {
 if (typeof global.workflowsDb === 'undefined') {
   global.workflowsDb = [...initialWorkflows];
 }
+if (typeof global.roundRobinRulesDb === 'undefined') {
+    global.roundRobinRulesDb = [...initialRoundRobinRules];
+}
 
 let users = global.usersDb;
 let leads = global.leadsDb;
@@ -92,6 +106,7 @@ let tasks = global.tasksDb;
 let customFieldDefinitions = global.customFieldsDb;
 let pipelineStages = global.pipelineStagesDb;
 let workflows = global.workflowsDb;
+let roundRobinRules = global.roundRobinRulesDb;
 
 // --- MOCK DELAY ---
 const mockDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -212,12 +227,33 @@ export const getLeadById = async (id: string): Promise<Lead | undefined> => {
 };
 
 export const addLead = async (leadData: NewLeadPayload): Promise<Lead> => {
-    const assignedUser = users.find(u => u.id === leadData.assignedToId);
-    if (!assignedUser) throw new Error("Assigned user not found");
+    // Check for a round robin rule for the lead's source
+    const rule = roundRobinRules.find(r => r.source === leadData.source);
+    let assignedToId = leadData.assignedToId;
+    let isAutoAssigned = false;
+
+    if (rule && rule.userIds.length > 0) {
+        // Rule exists, override assignment
+        const nextUserIndex = (rule.lastAssignedUserIndex + 1) % rule.userIds.length;
+        assignedToId = rule.userIds[nextUserIndex];
+        
+        // "Save" the updated index to the in-memory rule object
+        const ruleInDb = roundRobinRules.find(r => r.id === rule.id);
+        if (ruleInDb) {
+            ruleInDb.lastAssignedUserIndex = nextUserIndex;
+        }
+        isAutoAssigned = true;
+    }
+
+    const assignedUser = users.find(u => u.id === assignedToId);
+    if (!assignedUser) {
+        // Fallback if the assigned user is not found for some reason
+        throw new Error(`Assigned user with ID ${assignedToId} not found`);
+    }
 
     const newLead: Lead = {
         id: `lead-${Date.now()}`, name: leadData.name, email: leadData.email, phone: leadData.phone, source: leadData.source, assignedTo: assignedUser, status: leadData.status, inquiryType: leadData.inquiryType, stage: leadData.stage, customFields: leadData.customFields, photoUrl: `https://placehold.co/100x100.png`, lastContacted: new Date().toISOString(), tags: [],
-        history: [ { id: `h-${Date.now()}`, timestamp: new Date().toISOString(), user: assignedUser, action: 'Lead created.' } ],
+        history: [ { id: `h-${Date.now()}`, timestamp: new Date().toISOString(), user: assignedUser, action: isAutoAssigned ? `Lead created and auto-assigned to ${assignedUser.name} via Round Robin.` : 'Lead created.' } ],
         notes: [], documents: [],
     };
 
@@ -472,6 +508,39 @@ export const deleteWorkflow = async (ruleId: string): Promise<{ success: boolean
     const index = workflows.findIndex(r => r.id === ruleId);
     if (index > -1) {
         workflows.splice(index, 1);
+        await mockDelay(100);
+        return { success: true };
+    }
+    return { success: false };
+}
+
+// --- ROUND ROBIN FUNCTIONS ---
+export const getRoundRobinRules = async (): Promise<RoundRobinRule[]> => {
+    await mockDelay(100);
+    return [...roundRobinRules];
+}
+
+export const addRoundRobinRule = async (ruleData: Omit<RoundRobinRule, 'id' | 'lastAssignedUserIndex'>): Promise<RoundRobinRule> => {
+    // Ensure a source is only used once for a rule
+    if (roundRobinRules.some(r => r.source === ruleData.source)) {
+        throw new Error(`A rule for the source "${ruleData.source}" already exists.`);
+    }
+
+    const newRule: RoundRobinRule = {
+        ...ruleData,
+        id: `rr-${Date.now()}`,
+        lastAssignedUserIndex: -1, // Always start fresh
+    };
+
+    roundRobinRules.push(newRule);
+    await mockDelay(100);
+    return newRule;
+}
+
+export const deleteRoundRobinRule = async (ruleId: string): Promise<{ success: boolean }> => {
+    const index = roundRobinRules.findIndex(r => r.id === ruleId);
+    if (index > -1) {
+        roundRobinRules.splice(index, 1);
         await mockDelay(100);
         return { success: true };
     }

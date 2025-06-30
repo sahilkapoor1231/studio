@@ -1,12 +1,13 @@
-import { getCustomFields, getWorkflows, getPipelineStages, getUsers } from '@/lib/data'
+import { getCustomFields, getWorkflows, getPipelineStages, getUsers, getRoundRobinRules } from '@/lib/data'
 import { SettingsView } from '@/components/settings/settings-view'
 
 export default async function SettingsPage() {
-    const [customFields, pipelineStages, workflowRules, userList] = await Promise.all([
+    const [customFields, pipelineStages, workflowRules, userList, roundRobinRules] = await Promise.all([
         getCustomFields(),
         getPipelineStages(),
         getWorkflows(),
-        getUsers()
+        getUsers(),
+        getRoundRobinRules(),
     ]);
 
     const users = userList.filter(u => u.role === 'Counselor' || u.role === 'Receptionist');
@@ -23,6 +24,7 @@ export default async function SettingsPage() {
                 initialStages={pipelineStages}
                 initialWorkflows={workflowRules}
                 users={users}
+                initialRoundRobinRules={roundRobinRules}
             />
         </div>
     )

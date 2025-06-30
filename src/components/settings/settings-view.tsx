@@ -3,9 +3,9 @@
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Edit, Filter, PlusCircle, Tag, Trash2, UserPlus, Workflow } from 'lucide-react'
-import type { CustomFieldDefinition, PipelineStage, WorkflowRule, User, UpdateLeadFieldAction, WorkflowCondition } from '@/lib/types'
-import { deleteCustomField, deleteWorkflow, deletePipelineStage, deleteUser, updateWorkflowStatus } from '@/lib/data'
+import { ArrowRight, Edit, Filter, PlusCircle, RotateCcw, Tag, Trash2, UserPlus, Workflow } from 'lucide-react'
+import type { CustomFieldDefinition, PipelineStage, WorkflowRule, User, UpdateLeadFieldAction, WorkflowCondition, RoundRobinRule } from '@/lib/types'
+import { deleteCustomField, deleteWorkflow, deletePipelineStage, deleteUser, updateWorkflowStatus, deleteRoundRobinRule } from '@/lib/data'
 import { AddCustomFieldDialog } from '@/components/settings/add-custom-field-dialog'
 import { AddStageDialog } from '@/components/settings/add-stage-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -27,6 +27,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { AddRoundRobinRuleDialog } from './add-round-robin-rule-dialog'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip'
 
 
 interface SettingsViewProps {
@@ -34,6 +36,7 @@ interface SettingsViewProps {
     initialStages: PipelineStage[];
     initialWorkflows: WorkflowRule[];
     users: User[];
+    initialRoundRobinRules: RoundRobinRule[];
 }
 
 type FieldWithChildren = CustomFieldDefinition & { children: FieldWithChildren[] };
@@ -119,11 +122,12 @@ const CustomFieldItem = ({ field, level = 0, onFieldAdded, onFieldDelete }: { fi
     )
 }
 
-export function SettingsView({ initialFields, initialStages, initialWorkflows, users: initialUsers }: SettingsViewProps) {
+export function SettingsView({ initialFields, initialStages, initialWorkflows, users: initialUsers, initialRoundRobinRules }: SettingsViewProps) {
     const [fields, setFields] = useState<CustomFieldDefinition[]>(initialFields);
     const [stages, setStages] = useState<PipelineStage[]>(initialStages);
     const [workflows, setWorkflows] = useState<WorkflowRule[]>(initialWorkflows);
     const [allUsers, setAllUsers] = useState<User[]>(initialUsers);
+    const [roundRobinRules, setRoundRobinRules] = useState<RoundRobinRule[]>(initialRoundRobinRules);
     const { toast } = useToast();
     
     const fieldTree = buildFieldTree(fields);
@@ -134,6 +138,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
     const handleUserUpdated = (updatedUser: User) => {
         setAllUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
     };
+    const handleRoundRobinRuleAdded = (newRule: RoundRobinRule) => setRoundRobinRules(prev => [...prev, newRule]);
 
     const handleDeleteField = async (fieldId: string) => {
         const { success } = await deleteCustomField(fieldId);
@@ -205,6 +210,16 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
         }
     }
 
+    const handleDeleteRoundRobinRule = async (ruleId: string) => {
+        const { success } = await deleteRoundRobinRule(ruleId);
+        if (success) {
+            setRoundRobinRules(prev => prev.filter(r => r.id !== ruleId));
+            toast({ title: "Rule Deleted", description: "The assignment rule has been removed." });
+        } else {
+             toast({ title: "Error", description: "Failed to delete assignment rule.", variant: "destructive" });
+        }
+    }
+
     const getActionDisplayValue = (action: UpdateLeadFieldAction) => {
         if (action.field === 'assignedToId') {
             return initialUsers.find(u => u.id === action.value)?.name || action.value;
@@ -235,11 +250,12 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
 
     return (
         <Tabs defaultValue="fields">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="fields">Custom Fields</TabsTrigger>
                 <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
                 <TabsTrigger value="workflows">Workflows</TabsTrigger>
                 <TabsTrigger value="users">Users &amp; Roles</TabsTrigger>
+                <TabsTrigger value="assignment">Lead Assignment</TabsTrigger>
             </TabsList>
 
             <TabsContent value="fields" className="mt-6">
@@ -467,6 +483,74 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                         </div>
                     </CardContent>
                 </Card>
+            </TabsContent>
+
+            <TabsContent value="assignment" className="mt-6">
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle>Round Robin Assignment</CardTitle>
+                            <CardDescription>Automatically distribute new leads from a source to multiple users.</CardDescription>
+                        </div>
+                        <AddRoundRobinRuleDialog onRuleAdded={handleRoundRobinRuleAdded} users={initialUsers}>
+                             <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Rule</Button>
+                        </AddRoundRobinRuleDialog>
+                    </CardHeader>
+                    <CardContent>
+                       <div className="rounded-md border">
+                            {roundRobinRules.length === 0 ? (
+                                <div className="text-center p-8 text-muted-foreground">No assignment rules created yet.</div>
+                            ) : (
+                                roundRobinRules.map((rule, index) => (
+                                    <div key={rule.id} className={`flex items-center justify-between p-4 ${index < roundRobinRules.length - 1 ? 'border-b' : ''}`}>
+                                        <div>
+                                            <p className="font-medium">{rule.name}</p>
+                                            <p className="text-sm text-muted-foreground">Source: <Badge variant="secondary">{rule.source}</Badge></p>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className="text-sm text-muted-foreground">Users:</span>
+                                                {rule.userIds.map(userId => {
+                                                    const user = initialUsers.find(u => u.id === userId);
+                                                    return user ? (
+                                                        <TooltipProvider key={userId}>
+                                                            <Tooltip>
+                                                                <TooltipTrigger>
+                                                                    <Avatar className="h-6 w-6">
+                                                                        <AvatarImage src={user.avatarUrl} alt={user.name} />
+                                                                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                                                    </Avatar>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>{user.name}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    ) : null;
+                                                })}
+                                            </div>
+                                        </div>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon">
+                                                    <Trash2 className="h-4 w-4 text-destructive" /><span className="sr-only">Delete {rule.name}</span>
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>This will permanently delete the "{rule.name}" assignment rule. This action cannot be undone.</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteRoundRobinRule(rule.id)}>Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </CardContent>
+                 </Card>
             </TabsContent>
         </Tabs>
     )
