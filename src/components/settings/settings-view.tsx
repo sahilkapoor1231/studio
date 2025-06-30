@@ -509,7 +509,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                             <div className="flex items-center gap-2 mt-2">
                                                 <span className="text-sm text-muted-foreground">Users:</span>
                                                  <div className="flex items-center gap-4">
-                                                    {rule.assignments.map(assignment => {
+                                                    {rule.assignments && rule.assignments.map(assignment => {
                                                         const user = initialUsers.find(u => u.id === assignment.userId);
                                                         return user ? (
                                                             <TooltipProvider key={assignment.userId}>
@@ -517,7 +517,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                                                     <TooltipTrigger asChild>
                                                                         <div className="relative">
                                                                             <Avatar className="h-6 w-6">
-                                                                                <AvatarImage src={user.avatarUrl} alt={user.name} />
+                                                                                <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="person face" />
                                                                                 <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                                                                             </Avatar>
                                                                             <Badge variant="secondary" className="absolute -right-2 -bottom-1 h-4 px-1 text-xs rounded-full">
