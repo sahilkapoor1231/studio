@@ -36,12 +36,97 @@ interface SettingsViewProps {
     users: User[];
 }
 
+type FieldWithChildren = CustomFieldDefinition & { children: FieldWithChildren[] };
+
+const buildFieldTree = (fields: CustomFieldDefinition[]): FieldWithChildren[] => {
+    const fieldMap: Map<string, FieldWithChildren> = new Map(
+        fields.map(f => [f.id, { ...f, children: [] }])
+    );
+    const tree: FieldWithChildren[] = [];
+
+    fields.forEach(field => {
+        const node = fieldMap.get(field.id);
+        if (node) {
+            if (field.parentId && fieldMap.has(field.parentId)) {
+                // To prevent infinite loops with bad data, check if it's not its own ancestor
+                let parent = fieldMap.get(field.parentId);
+                let isAncestor = false;
+                while (parent) {
+                    if (parent.id === node.id) {
+                        isAncestor = true;
+                        break;
+                    }
+                    parent = parent.parentId ? fieldMap.get(parent.parentId) : undefined;
+                }
+                if (!isAncestor) {
+                    fieldMap.get(field.parentId)!.children.push(node);
+                } else {
+                     tree.push(node); // treat as top-level if there's a circular dependency
+                }
+            } else {
+                tree.push(node);
+            }
+        }
+    });
+
+    return tree;
+};
+
+
+const CustomFieldItem = ({ field, level = 0, onFieldAdded, onFieldDelete }: { field: FieldWithChildren, level?: number, onFieldAdded: (field: CustomFieldDefinition) => void, onFieldDelete: (fieldId: string) => void }) => {
+    return (
+        <div className="group">
+            <div className={`flex items-center justify-between p-4 ${level === 0 ? 'border-b' : ''}`}>
+                <div className="flex items-center gap-4" style={{ paddingLeft: `${level * 2}rem` }}>
+                    {level > 0 && <ArrowRight className="h-4 w-4 text-muted-foreground transform -rotate-45 -translate-y-2" style={{ position: 'absolute', left: `${level * 2 - 1.25}rem` }}/>}
+                    <div>
+                        <p className="font-medium">{field.label}</p>
+                        <p className="text-sm text-muted-foreground">{field.type}</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    {field.required && <Badge variant="outline">Required</Badge>}
+                    <AddCustomFieldDialog onFieldAdded={onFieldAdded} parentId={field.id}>
+                        <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity"><PlusCircle className="mr-2 h-4 w-4" /> Sub-field</Button>
+                    </AddCustomFieldDialog>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Trash2 className="h-4 w-4 " /><span className="sr-only">Delete {field.label}</span>
+                            </Button>
+                        </AlertDialogTrigger>
+                         <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will permanently delete the "{field.label}" field and all of its sub-fields. This action cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => onFieldDelete(field.id)}>Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            </div>
+            {field.children && field.children.length > 0 && (
+                 <div className="border-t">
+                    {field.children.map(child => <CustomFieldItem key={child.id} field={child} level={level + 1} onFieldAdded={onFieldAdded} onFieldDelete={onFieldDelete} />)}
+                </div>
+            )}
+        </div>
+    )
+}
+
 export function SettingsView({ initialFields, initialStages, initialWorkflows, users: initialUsers }: SettingsViewProps) {
     const [fields, setFields] = useState<CustomFieldDefinition[]>(initialFields);
     const [stages, setStages] = useState<PipelineStage[]>(initialStages);
     const [workflows, setWorkflows] = useState<WorkflowRule[]>(initialWorkflows);
     const [allUsers, setAllUsers] = useState<User[]>(initialUsers);
     const { toast } = useToast();
+    
+    const fieldTree = buildFieldTree(fields);
 
     const handleFieldAdded = (newField: CustomFieldDefinition) => setFields(prev => [...prev, newField]);
     const handleStageAdded = (newStage: PipelineStage) => setStages(prev => [...prev, newStage]);
@@ -53,8 +138,28 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
     const handleDeleteField = async (fieldId: string) => {
         const { success } = await deleteCustomField(fieldId);
         if (success) {
-            setFields(prev => prev.filter(f => f.id !== fieldId));
-            toast({ title: "Field Deleted", description: "The custom field has been removed." });
+            // Re-fetch or filter local state to reflect deletion of field and its children
+            const newFields = fields.filter(f => f.id !== fieldId && f.parentId !== fieldId); // simplistic, full re-fetch better
+            setFields(prev => prev.filter(f => f.id !== fieldId && f.parentId !== fieldId)) // temp fix
+            
+            const fieldsToDelete = new Set<string>();
+            const queue: string[] = [fieldId];
+            fieldsToDelete.add(fieldId);
+
+            while (queue.length > 0) {
+                const currentId = queue.shift()!;
+                const children = fields.filter(f => f.parentId === currentId);
+                for (const child of children) {
+                    if (!fieldsToDelete.has(child.id)) {
+                        fieldsToDelete.add(child.id);
+                        queue.push(child.id);
+                    }
+                }
+            }
+
+            setFields(prev => prev.filter(f => !fieldsToDelete.has(f.id)));
+
+            toast({ title: "Field Deleted", description: "The custom field and its sub-fields have been removed." });
         } else {
              toast({ title: "Error", description: "Failed to delete field.", variant: "destructive" });
         }
@@ -150,24 +255,11 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                     </CardHeader>
                     <CardContent>
                         <div className="rounded-md border">
-                            {fields.length === 0 ? (
+                            {fieldTree.length === 0 ? (
                                 <div className="text-center p-8 text-muted-foreground">No custom fields created yet.</div>
                             ) : (
-                                fields.map((field, index) => (
-                                    <div key={field.id} className={`flex items-center justify-between p-4 ${index < fields.length - 1 ? 'border-b' : ''}`}>
-                                        <div className="flex items-center gap-4">
-                                            <div>
-                                                <p className="font-medium">{field.label}</p>
-                                                <p className="text-sm text-muted-foreground">{field.type}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            {field.required && <Badge variant="outline">Required</Badge>}
-                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteField(field.id)}>
-                                                <Trash2 className="h-4 w-4 text-destructive" /><span className="sr-only">Delete {field.label}</span>
-                                            </Button>
-                                        </div>
-                                    </div>
+                                fieldTree.map((field) => (
+                                    <CustomFieldItem key={field.id} field={field} onFieldAdded={handleFieldAdded} onFieldDelete={handleDeleteField} />
                                 ))
                             )}
                         </div>

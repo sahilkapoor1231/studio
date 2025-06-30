@@ -86,12 +86,12 @@ if (typeof global.workflowsDb === 'undefined') {
   global.workflowsDb = [...initialWorkflows];
 }
 
-const users = global.usersDb;
-const leads = global.leadsDb;
-const tasks = global.tasksDb;
-const customFieldDefinitions = global.customFieldsDb;
-const pipelineStages = global.pipelineStagesDb;
-const workflows = global.workflowsDb;
+let users = global.usersDb;
+let leads = global.leadsDb;
+let tasks = global.tasksDb;
+let customFieldDefinitions = global.customFieldsDb;
+let pipelineStages = global.pipelineStagesDb;
+let workflows = global.workflowsDb;
 
 // --- MOCK DELAY ---
 const mockDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -399,13 +399,27 @@ export const addCustomField = async (field: Omit<CustomFieldDefinition, 'id'>): 
 }
 
 export const deleteCustomField = async (fieldId: string): Promise<{ success: boolean }> => {
-    const index = customFieldDefinitions.findIndex(f => f.id === fieldId);
-    if (index > -1) {
-        customFieldDefinitions.splice(index, 1);
-        await mockDelay(100);
-        return { success: true };
+    const fieldsToDelete = new Set<string>();
+    const queue: string[] = [fieldId];
+    fieldsToDelete.add(fieldId);
+
+    while (queue.length > 0) {
+        const currentId = queue.shift()!;
+        const children = customFieldDefinitions.filter(f => f.parentId === currentId);
+        for (const child of children) {
+            if (!fieldsToDelete.has(child.id)) {
+                fieldsToDelete.add(child.id);
+                queue.push(child.id);
+            }
+        }
     }
-    return { success: false };
+
+    const initialLength = customFieldDefinitions.length;
+    global.customFieldsDb = customFieldDefinitions.filter(f => !fieldsToDelete.has(f.id));
+    customFieldDefinitions = global.customFieldsDb;
+    
+    await mockDelay(100);
+    return { success: customFieldDefinitions.length < initialLength };
 }
 
 // --- PIPELINE STAGE FUNCTIONS ---

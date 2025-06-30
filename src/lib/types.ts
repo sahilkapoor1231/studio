@@ -46,6 +46,7 @@ export type CustomFieldDefinition = {
     type: CustomFieldType;
     required: boolean;
     options?: string[];
+    parentId?: string;
 };
 
 export type Lead = {

@@ -85,6 +85,27 @@ const generateCustomFieldsSchema = (customFields: CustomFieldDefinition[]) => {
     return z.object(shape);
 };
 
+// Helper function to build a tree from a flat list of fields
+type FieldWithChildren = CustomFieldDefinition & { children: FieldWithChildren[] };
+const buildFieldTree = (fields: CustomFieldDefinition[]): FieldWithChildren[] => {
+    const fieldMap: Map<string, FieldWithChildren> = new Map(
+        fields.map(f => [f.id, { ...f, children: [] }])
+    );
+    const tree: FieldWithChildren[] = [];
+
+    fields.forEach(field => {
+        const node = fieldMap.get(field.id);
+        if (node) {
+            if (field.parentId && fieldMap.has(field.parentId)) {
+                fieldMap.get(field.parentId)!.children.push(node);
+            } else {
+                tree.push(node);
+            }
+        }
+    });
+    return tree;
+};
+
 
 export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { children: React.ReactNode, onLeadAdded?: (newLead: Lead) => void, defaultStatus?: string }) {
   const [open, setOpen] = useState(false)
@@ -100,6 +121,8 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
       customFields: generateCustomFieldsSchema(customFields)
     })
   }, [customFields]);
+
+  const customFieldTree = useMemo(() => buildFieldTree(customFields), [customFields]);
 
   type AddLeadFormValues = z.infer<typeof finalSchema>;
 
@@ -264,6 +287,18 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
     )
   }
 
+  const renderFieldTree = (fields: FieldWithChildren[]) => {
+    return fields.map(fieldWithChildren => {
+        const { children, ...field } = fieldWithChildren;
+        return (
+            <div key={field.id} className="w-full space-y-4">
+                {renderCustomField(field as CustomFieldDefinition)}
+                {children?.length > 0 && <div className="mt-4 border-l-2 pl-4 border-dashed ml-2 space-y-4">{renderFieldTree(children)}</div>}
+            </div>
+        )
+    })
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -328,13 +363,17 @@ export function AddLeadDialog({ children, onLeadAdded, defaultStatus }: { childr
                         )}
                     />
 
-                    {customFields.length > 0 && <Separator />}
-                    {customFields.length > 0 && (
-                        <div className="space-y-2">
-                            <h4 className="text-sm font-medium">Additional Details</h4>
-                        </div>
+                    {customFieldTree.length > 0 && (
+                        <>
+                            <Separator />
+                            <div className="space-y-2">
+                                <h4 className="text-sm font-medium">Additional Details</h4>
+                            </div>
+                            <div className="space-y-4">
+                                {renderFieldTree(customFieldTree)}
+                            </div>
+                        </>
                     )}
-                    {customFields.map(renderCustomField)}
                 </>
             )}
             

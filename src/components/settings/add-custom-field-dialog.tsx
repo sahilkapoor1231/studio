@@ -51,7 +51,7 @@ const formSchema = z.object({
 
 type AddFieldFormValues = z.infer<typeof formSchema>
 
-export function AddCustomFieldDialog({ children, onFieldAdded }: { children: React.ReactNode, onFieldAdded: (newField: CustomFieldDefinition) => void }) {
+export function AddCustomFieldDialog({ children, onFieldAdded, parentId }: { children: React.ReactNode, onFieldAdded: (newField: CustomFieldDefinition) => void, parentId?: string }) {
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
 
@@ -73,6 +73,7 @@ export function AddCustomFieldDialog({ children, onFieldAdded }: { children: Rea
             label: values.label,
             type: values.type,
             required: values.required,
+            ...(parentId && { parentId })
         };
 
         if (values.type === 'Select' && values.options) {
@@ -101,9 +102,9 @@ export function AddCustomFieldDialog({ children, onFieldAdded }: { children: Rea
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Custom Field</DialogTitle>
+          <DialogTitle>{parentId ? 'Add Sub-Field' : 'Add Custom Field'}</DialogTitle>
           <DialogDescription>
-            Define a new custom field for your lead forms.
+            {parentId ? 'Define a new sub-field for your form.' : 'Define a new custom field for your lead forms.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
