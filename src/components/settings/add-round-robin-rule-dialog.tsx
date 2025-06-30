@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { useState, useEffect } from "react"
+import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import type { User, RoundRobinRule, LeadSource } from "@/lib/types"
+import type { User, RoundRobinRule, LeadSource, RoundRobinAssignment } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { addRoundRobinRule } from "@/lib/data"
 
@@ -19,8 +19,12 @@ const leadSources = ['Website Form', 'Facebook Ad', 'Walk-in', 'IVR', 'WhatsApp'
 const formSchema = z.object({
   name: z.string().min(3, "Rule name must be at least 3 characters."),
   source: z.enum(leadSources, { required_error: "Please select a source." }),
-  userIds: z.array(z.string()).refine(value => value.length >= 1, {
-    message: "You must select at least one user.",
+  assignments: z.array(z.object({
+    userId: z.string(),
+    enabled: z.boolean(),
+    weight: z.coerce.number().min(1, "Weight must be at least 1."),
+  })).refine((assignments) => assignments.some(a => a.enabled), {
+    message: "You must enable at least one user for assignment.",
   }),
 });
 
@@ -34,16 +38,46 @@ export function AddRoundRobinRuleDialog({ children, onRuleAdded, users }: { chil
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      userIds: [],
+      source: undefined,
+      assignments: users.map(u => ({ userId: u.id, enabled: false, weight: 1 })),
     },
   });
 
+  const { fields } = useFieldArray({
+      control: form.control,
+      name: "assignments"
+  });
+
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        name: "",
+        source: undefined,
+        assignments: users.map(u => ({ userId: u.id, enabled: false, weight: 1 })),
+      });
+    }
+  }, [open, users, form]);
+
+
   async function onSubmit(values: FormValues) {
     try {
+        const finalAssignments: RoundRobinAssignment[] = values.assignments
+            .filter(a => a.enabled)
+            .map(({ userId, weight }) => ({ userId, weight }));
+
+        if (finalAssignments.length === 0) {
+             toast({
+                title: "Validation Error",
+                description: "You must select and enable at least one user.",
+                variant: "destructive",
+            });
+            return;
+        }
+
         const newRule = await addRoundRobinRule({
             name: values.name,
             source: values.source,
-            userIds: values.userIds,
+            assignments: finalAssignments,
         });
         onRuleAdded(newRule);
         toast({
@@ -51,7 +85,6 @@ export function AddRoundRobinRuleDialog({ children, onRuleAdded, users }: { chil
             description: `The rule "${newRule.name}" has been created.`,
         });
         setOpen(false);
-        form.reset();
     } catch (error) {
         toast({
             title: "Error",
@@ -64,11 +97,11 @@ export function AddRoundRobinRuleDialog({ children, onRuleAdded, users }: { chil
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add Round Robin Rule</DialogTitle>
           <DialogDescription>
-            Create a rule to automatically distribute new leads.
+            Create a rule to automatically distribute new leads based on weights.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -108,46 +141,65 @@ export function AddRoundRobinRuleDialog({ children, onRuleAdded, users }: { chil
             />
             <FormField
               control={form.control}
-              name="userIds"
+              name="assignments"
               render={() => (
                 <FormItem>
                   <div className="mb-4">
                     <FormLabel>Distribute leads among these users</FormLabel>
                     <FormDescription>
-                      Select the users who will receive leads from this source.
+                      Select users and assign a weight. For example, a weight of 2 and 5 means for every 7 leads, one user gets 2 and the other gets 5.
                     </FormDescription>
                   </div>
-                  <div className="space-y-2">
-                    {users.map((user) => (
-                      <FormField
-                        key={user.id}
-                        control={form.control}
-                        name="userIds"
-                        render={({ field }) => {
-                          return (
-                            <FormItem key={user.id} className="flex flex-row items-start space-x-3 space-y-0">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(user.id)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...(field.value || []), user.id])
-                                      : field.onChange(
-                                          field.value?.filter(
-                                            (value) => value !== user.id
-                                          )
-                                        );
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                {user.name} ({user.role})
-                              </FormLabel>
-                            </FormItem>
-                          );
-                        }}
-                      />
-                    ))}
+                  <div className="space-y-3 max-h-[25vh] overflow-y-auto pr-2">
+                    {fields.map((item, index) => {
+                      const user = users.find(u => u.id === item.userId);
+                      if (!user) return null;
+                      return (
+                        <div key={item.id} className="flex items-center gap-4 p-2 border rounded-md bg-background">
+                            <FormField
+                                control={form.control}
+                                name={`assignments.${index}.enabled`}
+                                render={({ field }) => (
+                                <FormItem className="flex-none">
+                                    <FormControl>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={(checked) => {
+                                            field.onChange(checked);
+                                            // Reset weight to 1 if user is re-enabled
+                                            if (checked) {
+                                                form.setValue(`assignments.${index}.weight`, 1, { shouldValidate: true });
+                                            }
+                                        }}
+                                    />
+                                    </FormControl>
+                                </FormItem>
+                                )}
+                            />
+                          <FormLabel className="font-normal flex-1 text-sm">{user.name} <span className="text-muted-foreground">({user.role})</span></FormLabel>
+                          <div className="flex items-center gap-2">
+                             <FormLabel htmlFor={`assignments.${index}.weight`} className="text-xs text-muted-foreground">Weight</FormLabel>
+                              <FormField
+                                control={form.control}
+                                name={`assignments.${index}.weight`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        min="1"
+                                        className="w-16 h-8"
+                                        disabled={!form.watch(`assignments.${index}.enabled`)}
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                   <FormMessage />
                 </FormItem>

@@ -141,11 +141,16 @@ export type WorkflowRule = {
 }
 
 // LEAD ASSIGNMENT TYPES
+export type RoundRobinAssignment = {
+    userId: string;
+    weight: number; // Represents the number of leads to assign in a cycle
+};
+
 export type RoundRobinRule = {
     id: string;
     name: string;
     source: LeadSource;
-    userIds: string[];
-    // Index of the last user who received a lead.
-    lastAssignedUserIndex: number;
+    assignments: RoundRobinAssignment[];
+    // Index of the last user ID in the expanded assignment queue.
+    lastAssignedIndex: number;
 };

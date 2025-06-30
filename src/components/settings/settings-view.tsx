@@ -508,24 +508,31 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                             <p className="text-sm text-muted-foreground">Source: <Badge variant="secondary">{rule.source}</Badge></p>
                                             <div className="flex items-center gap-2 mt-2">
                                                 <span className="text-sm text-muted-foreground">Users:</span>
-                                                {rule.userIds.map(userId => {
-                                                    const user = initialUsers.find(u => u.id === userId);
-                                                    return user ? (
-                                                        <TooltipProvider key={userId}>
-                                                            <Tooltip>
-                                                                <TooltipTrigger>
-                                                                    <Avatar className="h-6 w-6">
-                                                                        <AvatarImage src={user.avatarUrl} alt={user.name} />
-                                                                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                                                                    </Avatar>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>
-                                                                    <p>{user.name}</p>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
-                                                    ) : null;
-                                                })}
+                                                 <div className="flex items-center gap-4">
+                                                    {rule.assignments.map(assignment => {
+                                                        const user = initialUsers.find(u => u.id === assignment.userId);
+                                                        return user ? (
+                                                            <TooltipProvider key={assignment.userId}>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <div className="relative">
+                                                                            <Avatar className="h-6 w-6">
+                                                                                <AvatarImage src={user.avatarUrl} alt={user.name} />
+                                                                                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                                                            </Avatar>
+                                                                            <Badge variant="secondary" className="absolute -right-2 -bottom-1 h-4 px-1 text-xs rounded-full">
+                                                                                {assignment.weight}
+                                                                            </Badge>
+                                                                        </div>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <p>{user.name} (Weight: {assignment.weight})</p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        ) : null;
+                                                    })}
+                                                </div>
                                             </div>
                                         </div>
                                         <AlertDialog>

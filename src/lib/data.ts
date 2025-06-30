@@ -1,6 +1,6 @@
 'use server'
 
-import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType, WorkflowAction, AddNoteAction, AddTagAction, CreateTaskAction, UpdateLeadFieldAction, WorkflowCondition, UserRole, RoundRobinRule, LeadSource } from './types';
+import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType, WorkflowAction, AddNoteAction, AddTagAction, CreateTaskAction, UpdateLeadFieldAction, WorkflowCondition, UserRole, RoundRobinRule, LeadSource, RoundRobinAssignment } from './types';
 import { subDays, formatISO, addDays } from 'date-fns';
 
 // This avoids issues with hot-reloading wiping out our data in development
@@ -71,8 +71,11 @@ const initialRoundRobinRules: RoundRobinRule[] = [
         id: 'rr-1',
         name: 'Website Lead Distribution',
         source: 'Website Form',
-        userIds: ['user-2', 'user-4'], // Alex Carter and Sam Taylor
-        lastAssignedUserIndex: -1, // Start with the first user
+        assignments: [
+            { userId: 'user-2', weight: 1 }, // Alex Carter
+            { userId: 'user-4', weight: 1 }, // Sam Taylor
+        ],
+        lastAssignedIndex: -1,
     }
 ];
 
@@ -232,17 +235,29 @@ export const addLead = async (leadData: NewLeadPayload): Promise<Lead> => {
     let assignedToId = leadData.assignedToId;
     let isAutoAssigned = false;
 
-    if (rule && rule.userIds.length > 0) {
-        // Rule exists, override assignment
-        const nextUserIndex = (rule.lastAssignedUserIndex + 1) % rule.userIds.length;
-        assignedToId = rule.userIds[nextUserIndex];
-        
-        // "Save" the updated index to the in-memory rule object
-        const ruleInDb = roundRobinRules.find(r => r.id === rule.id);
-        if (ruleInDb) {
-            ruleInDb.lastAssignedUserIndex = nextUserIndex;
-        }
+    if (rule && rule.assignments.length > 0) {
+        // Rule exists, override assignment with weighted round robin logic.
         isAutoAssigned = true;
+
+        // 1. Create an expanded queue based on weights
+        const assignmentQueue: string[] = [];
+        rule.assignments.forEach(assignment => {
+            for (let i = 0; i < assignment.weight; i++) {
+                assignmentQueue.push(assignment.userId);
+            }
+        });
+
+        if (assignmentQueue.length > 0) {
+            // 2. Get the next user from the queue
+            const nextIndex = (rule.lastAssignedIndex + 1) % assignmentQueue.length;
+            assignedToId = assignmentQueue[nextIndex];
+            
+            // 3. "Save" the updated index to the in-memory rule object
+            rule.lastAssignedIndex = nextIndex;
+        } else {
+            // No valid assignments in the rule, fallback to original
+            isAutoAssigned = false;
+        }
     }
 
     const assignedUser = users.find(u => u.id === assignedToId);
@@ -520,16 +535,20 @@ export const getRoundRobinRules = async (): Promise<RoundRobinRule[]> => {
     return [...roundRobinRules];
 }
 
-export const addRoundRobinRule = async (ruleData: Omit<RoundRobinRule, 'id' | 'lastAssignedUserIndex'>): Promise<RoundRobinRule> => {
+export const addRoundRobinRule = async (ruleData: Omit<RoundRobinRule, 'id' | 'lastAssignedIndex'>): Promise<RoundRobinRule> => {
     // Ensure a source is only used once for a rule
     if (roundRobinRules.some(r => r.source === ruleData.source)) {
         throw new Error(`A rule for the source "${ruleData.source}" already exists.`);
+    }
+    
+    if (!ruleData.assignments || ruleData.assignments.length === 0) {
+        throw new Error("A rule must have at least one user assigned.");
     }
 
     const newRule: RoundRobinRule = {
         ...ruleData,
         id: `rr-${Date.now()}`,
-        lastAssignedUserIndex: -1, // Always start fresh
+        lastAssignedIndex: -1, // Always start fresh
     };
 
     roundRobinRules.push(newRule);
