@@ -86,12 +86,122 @@ This CRM is equipped with a comprehensive set of features designed to optimize t
 
 This section provides a high-level overview of the CRM's technical architecture, explaining how different parts of the system work together.
 
-This section provides a visual map of how the project's files are organized. (Note: A visual diagram would be here if supported.)
+## Project Structure
 
-
-
-This section provides a visual map of the project's files are organized. (Note: A visual diagram would be here if supported.)
-
+.
+├── README.md
+├── apphosting.yaml
+├── components.json
+├── next.config.ts
+├── package-lock.json
+├── package.json
+├── postcss.config.mjs
+├── tailwind.config.ts
+├── tsconfig.json
+├── .idx
+│   └── dev.nix
+├── .vscode
+│   └── settings.json
+├── docs
+│   └── blueprint.md
+└── src
+    ├── next.config.ts
+    ├── ai
+    │   ├── dev.ts
+    │   ├── genkit.ts
+    │   └── flows
+    │       └── summarize-lead-flow.ts
+    ├── app
+    │   ├── favicon.ico
+    │   ├── globals.css
+    │   ├── layout.tsx
+    │   └── page.tsx
+    ├── components
+    │   ├── add-lead-dialog.tsx
+    │   ├── app-header.tsx
+    │   ├── app-sidebar.tsx
+    │   ├── dashboard
+    │   │   ├── lead-filters.tsx
+    │   │   ├── lead-table.tsx
+    │   │   ├── reassign-lead-dialog.tsx
+    │   │   └── schedule-follow-up-dialog.tsx
+    │   ├── deleted-leads
+    │   │   ├── deleted-leads-view.tsx
+    │   │   └── restore-reassign-dialog.tsx
+    │   ├── lead-profile
+    │   │   ├── ai-insights.tsx
+    │   │   ├── book-appointment-dialog.tsx
+    │   │   ├── document-manager.tsx
+    │   │   ├── journey-timeline.tsx
+    │   │   ├── notes-feed.tsx
+    │   │   ├── patient-info-card.tsx
+    │   │   └── patient-journey.tsx
+    │   ├── pipeline
+    │   │   ├── lead-card.tsx
+    │   │   └── pipeline-column.tsx
+    │   ├── reports
+    │   │   └── reports-view.tsx
+    │   ├── settings
+    │   │   ├── add-custom-field-dialog.tsx
+    │   │   ├── add-round-robin-rule-dialog.tsx
+    │   │   ├── add-stage-dialog.tsx
+    │   │   ├── add-workflow-dialog.tsx
+    │   │   ├── edit-user-dialog.tsx
+    │   │   ├── invite-user-dialog.tsx
+    │   │   └── settings-view.tsx
+    │   └── ui
+    │       ├── accordion.tsx
+    │       ├── alert-dialog.tsx
+    │       ├── alert.tsx
+    │       ├── avatar.tsx
+    │       ├── badge.tsx
+    │       ├── button.tsx
+    │       ├── calendar.tsx
+    │       ├── card.tsx
+    │       ├── carousel.tsx
+    │       ├── chart.tsx
+    │       ├── checkbox.tsx
+    │       ├── collapsible.tsx
+    │       ├── dialog.tsx
+    │       ├── dropdown-menu.tsx
+    │       ├── form.tsx
+    │       ├── input.tsx
+    │       ├── label.tsx
+    │       ├── menubar.tsx
+    │       ├── popover.tsx
+    │       ├── progress.tsx
+    │       ├── radio-group.tsx
+    │       ├── scroll-area.tsx
+    │       ├── select.tsx
+    │       ├── separator.tsx
+    │       ├── sheet.tsx
+    │       ├── sidebar.tsx
+    │       ├── skeleton.tsx
+    │       ├── slider.tsx
+    │       ├── switch.tsx
+    │       ├── table.tsx
+    │       ├── tabs.tsx
+    │       ├── textarea.tsx
+    │       ├── toast.tsx
+    │       ├── toaster.tsx
+    │       └── tooltip.tsx
+    └── app
+        └── (app)
+            ├── calendar
+            │   └── page.tsx
+            ├── dashboard
+            │   └── page.tsx
+            ├── deleted-leads
+            │   └── page.tsx
+            ├── pipeline
+            │   └── page.tsx
+            ├── reports
+            │   └── page.tsx
+            ├── settings
+            │   └── page.tsx
+            └── leads
+                └── [id]
+                    └── page.tsx
 
 
 Think of the CRM for Healthcare Leads as a well-organized office with different teams working together to manage patient inquiries.
@@ -183,50 +293,109 @@ Keeping patient profiles up-to-date is essential for effective communication and
 
 The patient's profile will now reflect the changes you've made.
 
-#### How to Upload a Document to a Patient Profile
+### Viewing Patient Journey
 
-Uploading relevant documents keeps all patient information in one place:
+The Patient Journey tab provides a chronological history of interactions with a lead/patient:
 
 1.  **Access the Patient Profile:** Find and open the patient's profile (see "How to Update a Patient Profile" above).
-2.  **Locate the Documents Section:** On the patient's profile page, find a section specifically for "Documents" or "Files."
-3.  **Click the "Upload Document" Button:** Look for a button labeled "Upload Document," "+ Add File," or similar, and click it.
-4.  **Select the File:** A file browser window will open on your computer. Navigate to the location of the document you want to upload, select it, and click "Open" or "Select."
-5.  **Add Document Details (Optional):** You might be prompted to add a title, description, or category for the document.
-6.  **Confirm Upload:** Click the "Upload" or "Save" button.
+2.  **Click the "Patient Journey" Tab:** On the patient's profile page, locate and click on the "Patient Journey" tab.
+3.  **Review the Timeline:** A timeline or list of events related to this patient will be displayed. This includes things like:
+    *   Lead creation date
+    *   Status changes (e.g., from "New Lead" to "Contacted")
+    *   Notes added
+    *   Documents uploaded or requested
+    *   Appointments scheduled (if integrated)
+    *   Other key interactions.
 
-The document will be securely uploaded and linked to the patient's profile.
+Reviewing this timeline helps you quickly understand the history of engagement with the patient.
+
+### Using Filters and Sorting in Lead Lists
+
+Filters and sorting help you find specific groups of leads or organize your view:
+
+1.  **Go to the Lead List:** Navigate to the "Leads" or "Lead Management" section.
+2.  **Locate Filter Options:** Look for filter buttons or dropdowns, often located at the top of the lead list table.
+3.  **Apply Filters:** Click on a filter option (e.g., "Status," "Source," "Assigned To"). Select the criteria you want to filter by (e.g., Status: "New Lead," Source: "Website Form"). You can often apply multiple filters.
+4.  **Locate Sorting Options:** Look for column headers with sorting icons (arrows).
+5.  **Apply Sorting:** Click on a column header (e.g., "Name," "Creation Date," "Last Activity"). Click again to reverse the sort order (ascending or descending).
+
+Filters and sorting update the lead list display to show only the leads that match your criteria, or in the order you specify.
+
+### Searching for a Lead or Patient
+
+ Quickly find a specific lead or patient using the search function:
+
+ 1.  **Find the Search Bar:** Locate the search bar, usually prominent in the CRM header or within the Lead Management/Patient Profiles section.
+ 2.  **Enter Search Terms:** Type in the name, phone number, email address, or other identifier for the lead or patient you are looking for.
+ 3.  **View Search Results:** As you type, the CRM may show matching results dynamically, or you might need to click a "Search" button. Click on the desired result to navigate to their profile.
+
+ The search function provides a fast way to access specific patient information.
+
+#### How to Upload a Document to a Patient Profile
+
+ Uploading relevant documents keeps all patient information in one place:
+
+ 1.  **Access the Patient Profile:** Find and open the patient's profile (see "How to Update a Patient Profile" above).
+ 2.  **Locate the Documents Section:** On the patient's profile page, find a section specifically for "Documents" or "Files."
+ 3.  **Click the "Upload Document" Button:** Look for a button labeled "Upload Document," "+ Add File," or similar, and click it.
+ 4.  **Select the File:** A file browser window will open on your computer. Navigate to the location of the document you want to upload, select it, and click "Open" or "Select."
+ 5.  **Add Document Details (Optional):** You might be prompted to add a title, description, or category for the document.
+ 6.  **Confirm Upload:** Click the "Upload" or "Save" button.
+
+ The document will be securely uploaded and linked to the patient's profile.
 
 #### How to Request a Document from a Patient
 
-Requesting documents securely streamlines the onboarding process:
+ Requesting documents securely streamlines the onboarding process:
 
-1.  **Access the Patient Profile:** Find and open the patient's profile (see "How to Update a Patient Profile" above).
-2.  **Locate the Documents Section:** On the patient's profile page, find the "Documents" or "Files" section.
-3.  **Click the "Request Document" Button:** Look for a button labeled "Request Document" or similar, and click it.
-4.  **Specify the Document(s) Needed:** You might be able to select from a list of common documents or type in the name of the specific document you need.
-5.  **Send the Request:** Click the "Send Request" or "Generate Secure Link" button.
+ 1.  **Access the Patient Profile:** Find and open the patient's profile (see "How to Update a Patient Profile" above).
+ 2.  **Locate the Documents Section:** On the patient's profile page, find the "Documents" or "Files" section.
+ 3.  **Click the "Request Document" Button:** Look for a button labeled "Request Document" or similar, and click it.
+ 4.  **Specify the Document(s) Needed:** You might be able to select from a list of common documents or type in the name of the specific document you need.
+ 5.  **Send the Request:** Click the "Send Request" or "Generate Secure Link" button.
 
-The system will likely send a secure link to the patient (via email or another configured method) allowing them to upload the requested document(s) directly to their profile.
+ The system will likely send a secure link to the patient (via email or another configured method) allowing them to upload the requested document(s) directly to their profile.
 
-Think of the CRM for Healthcare Leads as a well-organized office with different teams working together to manage patient inquiries.
+ Think of the CRM for Healthcare Leads as a well-organized office with different teams working together to manage patient inquiries.
 
-The system is built using a modern and efficient structure:
+ ## API Endpoints
 
--   **Next.js (What You See - The User Interface):** This is the part of the CRM that you interact with using your web browser or phone. Think of it as the friendly front desk and the different areas in an office where tasks happen. Next.js is responsible for showing you information, responding when you click buttons or type, and making the application feel quick and easy to use. It's built with a technology called React, which helps make web pages lively and interactive.
+ This section outlines the available API endpoints in the CRM project.
+ The CRM utilizes API endpoints for communication between the frontend (what the user sees and interacts with) and the backend (where data is stored and logic is processed). Think of API endpoints as the specific entry points for the frontend to request information from or send instructions to the backend.
 
--   **Firebase Studio (The Backend and Storage Department):** This is the powerhouse behind the scenes. Firebase Studio is like the filing cabinets, the secure vault for patient information, and the central communication hub. It's a collection of services that handle:
-    -   **Data Storage (Firestore):** Like a digital filing cabinet where all the lead and patient information, notes, and other relevant data are securely stored.
-    -   **Authentication:** Manages user logins and ensures that only authorized personnel can access the system and specific information (like a secure ID system for the office).
-    -   **File Storage (Firebase Storage):** Where documents like patient records or forms are securely uploaded and stored.
-    -   **Other Backend Logic:** Handles some of the behind-the-scenes processing and rules.
+ When a user performs an action in the CRM's user interface, such as adding a new lead, updating a patient profile, or requesting a lead summary, the frontend sends an API request to the appropriate endpoint on the backend. The backend then processes this request, interacts with the database (Firestore) or other services (like AI models), and sends a response back to the frontend.
 
-Key interactions:
+ This structured approach using API endpoints ensures efficient and secure data exchange, allows for clear separation of concerns between the frontend and backend, and enables triggering specific backend processes (like the AI summarization flow).
 
-- The part you see (built with Next.js) communicates with the behind-the-scenes system (Firebase) to manage your login and remember who you are.
-- When you look at or add information about a potential patient, the part you see asks for or sends that information to the secure storage in Firebase.
-- Smart features that use AI, possibly managed by a tool like Genkit, might also work with the behind-the-scenes system to store or get information they need to help you.
+ ### `/api/summarize-lead-flow` (AI-Powered Summary)
 
-## Security Procedures and Data Handling
+ *   **Description:** This endpoint triggers an automated process that leverages Artificial Intelligence (AI) to analyze all available information related to a specific lead (contact details, notes, history logs, etc.) and generates a concise summary.
+ *   **Purpose:** To provide users with a quick and comprehensive overview of a lead's background and interactions without needing to manually review all the data. This aids in faster understanding and more informed decision-making.
+ *   **Method:** `POST` (typically, as the lead ID is sent in the request body)
+ *   **Request Body:** Expected to contain a JSON object with the `leadId` to be summarized.
+ *   **Response:** Returns a JSON object containing the generated lead summary text.
+ *   **Triggered by:** User action in the frontend (e.g., clicking a "Summarize" button on a lead profile).
+
+ ### Other Potential API Endpoints (Future Enhancements)
+
+ The following are placeholders for other API endpoints that may be implemented as the CRM project evolves:
+
+ *   **`/api/leads`**: Endpoint for fetching a list of leads, adding new leads, or updating lead status.
+ *   **`/api/leads/{id}`**: Endpoint for retrieving or updating a specific lead's details.
+ *   **`/api/patients`**: Endpoint for fetching a list of patients or adding new patient profiles.
+ *   **`/api/patients/{id}`**: Endpoint for retrieving or updating a specific patient's profile details.
+ *   **`/api/documents/upload`**: Endpoint for handling secure document uploads for a lead or patient.
+ *   **`/api/documents/request`**: Endpoint for initiating a secure document request to a patient.
+ *   **`/api/users`**: Endpoint(s) for managing user accounts and roles (typically restricted to administrators).
+ *   **`/api/settings`**: Endpoint(s) for retrieving and updating system configuration settings.
+ *   **`/api/reports/{reportType}`**: Endpoint(s) for generating specific reports based on CRM data.
+ *   **`/api/auth/login`**: Endpoint for user authentication.
+
+ *(Note: The exact endpoint URLs, methods, and request/response formats for these potential endpoints would be defined during their implementation and detailed in separate API documentation.)*
+
+ For more technical details on the API endpoints, including specific request/response schemas and authentication requirements, please refer to the dedicated API documentation (if available) or the relevant source code files.
+
+ ## Security Procedures and Data Handling
 
 Maintaining the security and privacy of patient information is paramount. This CRM is designed with features to support compliance with regulations like HIPAA. However, the responsible use and configuration of the system are also critical.
 
@@ -244,6 +413,168 @@ Here are some general security guidelines and best practices:
 **Data Storage Security:** Patient data stored within Firebase (Firestore and Storage) benefits from Google's robust security infrastructure. However, proper configuration of access rules within Firebase is essential to maintain data privacy.
 
 By following these guidelines and utilizing the security features of the CRM, your organization can maintain a high standard of data protection for your healthcare leads and patients.
+
+
+## Data Flow Diagram (DFD)
+
+This text-based representation outlines the high-level data flow within the CRM system. It shows how data moves between external entities, processes, and data stores.
+
+
+### Data Flow Diagram (DFD)
+
+This text-based representation outlines the high-level data flow within the CRM system. It shows how data moves between external entities, processes, and data stores.
+
+**External Entities:**
+- **Lead Sources (Website Forms, etc.):** Where new leads originate.
+- **Healthcare Staff (Users):** Individuals who interact with the CRM.
+- **Patients:** Individuals whose information is stored and managed.
+- **External Systems (Optional - EMR/EHR, Calendar Apps):** Other software systems the CRM might interact with.
+
+**Processes:**
+- **1. Capture and Intake Lead:** Automatically or manually receive new lead information.
+- **2. Manage Leads:** View, filter, assign, and update lead information.
+- **3. Manage Patient Profiles:** View, edit, and add details to individual patient records.
+- **4. Manage Documents:** Upload, request, and store documents related to leads/patients.
+- **5. Track Patient Journey:** Record and visualize the progression of a lead through the pipeline.
+- **6. Generate Reports:** Create summaries and analytics based on CRM data.
+- **7. Manage System Settings:** Configure CRM rules, users, and workflows.
+- **8. Summarize Lead (AI):** Process lead data to generate concise summaries.
+- **9. Authentication and Authorization:** Control user access and permissions.
+
+**Data Stores:**
+- **DS1: Leads Database (Firestore):** Stores all lead information (contact details, source, status, etc.).
+- **DS2: Patient Profiles Database (Firestore):** Stores detailed patient information, linked to leads after conversion.
+- **DS3: Documents Storage (Firebase Storage):** Stores uploaded documents (forms, records, etc.).
+- **DS4: System Configuration (Firestore/Other):** Stores settings, user roles, pipeline stages, etc.
+- **DS5: Audit Logs (Firestore/Other):** Stores a history of system activities.
+
+**Data Flows:**
+
+1.  **Lead Sources** -> (New Lead Data) -> **1. Capture and Intake Lead** -> (Lead Data) -> **DS1: Leads Database**
+2.  **Healthcare Staff** -> (View/Edit/Assign Commands) -> **2. Manage Leads** -> (Updated Lead Data) -> **DS1: Leads Database**
+3.  **Healthcare Staff** -> (View/Edit Commands) -> **3. Manage Patient Profiles** -> (Updated Patient Data) -> **DS2: Patient Profiles Database**
+4.  **Healthcare Staff** -> (Upload/Request Commands) -> **4. Manage Documents** -> (Document Files/Request Status) -> **DS3: Documents Storage** & (Document Metadata) -> **DS2: Patient Profiles Database**
+5.  **DS1: Leads Database** / **DS2: Patient Profiles Database** -> (Lead/Patient History Data) -> **5. Track Patient Journey** -> (Journey Visualization) -> **Healthcare Staff**
+6.  **DS1: Leads Database** / **DS2: Patient Profiles Database** / **DS5: Audit Logs** -> (Raw Data) -> **6. Generate Reports** -> (Reports) -> **Healthcare Staff**
+7.  **Healthcare Staff (Admin)** -> (Configuration Changes) -> **7. Manage System Settings** -> (Setting Data) -> **DS4: System Configuration**
+8.  **DS1: Leads Database** / **DS2: Patient Profiles Database** -> (Lead Data) -> **8. Summarize Lead (AI)** -> (Summary) -> **Healthcare Staff**
+9.  **Healthcare Staff** -> (Login Credentials) -> **9. Authentication and Authorization** -> (Access Granted/Denied) -> **CRM Processes** -> (User Role/Permissions) -> **DS4: System Configuration**
+10. **All Processes** -> (Activity Details) -> **DS5: Audit Logs**
+11. **External Systems** <-> (Data Exchange - if integrated) <-> **CRM Processes**
+
+*(Note: This is a simplified, high-level DFD. A detailed DFD would break down each process further.)*
+
+## Data Flow Diagram (DFD) - Text Representation
+
+This section provides a text-based representation of the key data flows within the CRM for Healthcare Leads. It illustrates how data moves through the system, identifying external entities, processes, and data stores.
+
+**External Entities:**
+
+- **Lead Sources:** Websites, landing pages, social media, manual input, etc.
+- **Users:** CRM users (Administrators, Sales Representatives, etc.)
+- **Patients/Leads:** Individuals whose information is being managed.
+- **External Systems:** EMR/EHR systems, calendar applications, third-party integrations (Future Enhancements).
+
+**Data Stores:**
+
+- **Lead Database:** Stores information about potential patients (leads).
+- **Patient Profile Database:** Stores comprehensive patient information.
+- **Document Storage:** Securely stores uploaded documents.
+- **Audit Logs:** Records system activities and changes.
+- **User Database:** Stores user information and roles.
+- **Configuration Settings:** Stores system configuration, including pipeline stages and assignment rules.
+
+**Processes:**
+
+- **P1: Capture Lead:** Gathers lead information from various sources.
+- **P2: Filter and Assign Lead:** Filters leads based on criteria and assigns them to users.
+- **P3: Manage Patient Profile:** Creates, updates, and views patient information.
+- **P4: Manage Documents:** Handles document uploads, requests, and storage.
+- **P5: Summarize Lead (AI Flow):** Uses AI to generate lead summaries.
+- **P6: Track Patient Journey:** Records and visualizes patient interactions and progress.
+- **P7: Manage User Access:** Controls user permissions based on roles.
+- **P8: Log System Activity:** Records all system actions in the audit trail.
+- **P9: Detect Duplicate Leads:** Identifies potential duplicate lead entries.
+
+---
+
+**Data Flows:**
+
+1.  **Lead Sources --> P1: Capture Lead:** Lead information enters the system from various sources.
+    - *Data:* Name, contact information, source, inquiry details, etc.
+
+2.  **P1: Capture Lead --> Lead Database:** Captured lead information is stored in the Lead Database.
+    - *Data:* New lead record.
+
+3.  **Lead Database --> P2: Filter and Assign Lead:** Lead information is retrieved for filtering and assignment.
+    - *Data:* Unassigned leads, lead details.
+
+4.  **Configuration Settings --> P2: Filter and Assign Lead:** Assignment rules and filtering criteria are used to process leads.
+    - *Data:* Assignment rules, filter criteria.
+
+5.  **P2: Filter and Assign Lead --> Lead Database:** Assigned leads are updated in the Lead Database.
+    - *Data:* Updated lead record with assigned user.
+
+6.  **P2: Filter and Assign Lead --> User Database:** User information is accessed for lead assignment.
+    - *Data:* User roles and availability.
+
+7.  **Users --> P2: Filter and Assign Lead:** Users can manually assign or reassign leads.
+    - *Data:* Manual assignment instructions.
+
+8.  **Users --> P3: Manage Patient Profile:** Users create, update, and view patient profiles.
+    - *Data:* New patient information, updates to existing profiles, view requests.
+
+9.  **P3: Manage Patient Profile --> Patient Profile Database:** Patient profile information is stored and updated.
+    - *Data:* New or updated patient record.
+
+10. **Lead Database --> P3: Manage Patient Profile:** Information from the Lead Database is used to create or enrich patient profiles.
+    - *Data:* Lead details for profile creation.
+
+11. **Users --> P4: Manage Documents:** Users upload documents or request documents from patients/leads.
+    - *Data:* Uploaded files, document request instructions.
+
+12. **Patients/Leads --> P4: Manage Documents:** Patients/Leads upload documents via secure links.
+    - *Data:* Uploaded document files.
+
+13. **P4: Manage Documents --> Document Storage:** Uploaded documents are stored securely.
+    - *Data:* Stored document files.
+
+14. **Document Storage --> P4: Manage Documents --> Users:** Users can view or download stored documents.
+    - *Data:* Document files for viewing/download.
+
+15. **Lead Database --> P5: Summarize Lead (AI Flow):** Lead data is sent to the AI flow for summarization.
+    - *Data:* Lead details.
+
+16. **P5: Summarize Lead (AI Flow) --> Users:** The generated lead summary is provided to the user.
+    - *Data:* Lead summary text.
+
+17. **Users --> P6: Track Patient Journey:** User actions and status changes are recorded.
+    - *Data:* User activity, status updates, notes.
+
+18. **P6: Track Patient Journey --> Patient Profile Database:** Journey milestones and interactions are recorded in the patient profile.
+    - *Data:* Updated patient journey timeline.
+
+19. **Users --> P7: Manage User Access:** Administrators manage user roles and permissions.
+    - *Data:* New user creation, role assignments, permission modifications.
+
+20. **P7: Manage User Access --> User Database:** User roles and permissions are stored.
+    - *Data:* Updated user records.
+
+21. **Users --> P8: Log System Activity:** All user actions are captured for the audit trail.
+    - *Data:* User activity details (action, timestamp, user).
+
+22. **P8: Log System Activity --> Audit Logs:** System activity is recorded in the Audit Logs.
+    - *Data:* New audit log entry.
+
+23. **Lead Database --> P9: Detect Duplicate Leads:** Lead information is checked for potential duplicates.
+    - *Data:* Lead details for comparison.
+
+24. **P9: Detect Duplicate Leads --> Users:** Potential duplicate leads are flagged for user review.
+    - *Data:* Notification of potential duplicates, details of suspected duplicates.
+
+---
+
+*(Note: This is a simplified text-based representation. A visual DFD would provide a more intuitive understanding of the data flow.)*
 
 
 ## Backup and Recovery
@@ -310,10 +641,6 @@ This section is intended to showcase real-world examples of how the CRM for Heal
  
  By filling in these structures with real or hypothetical examples, this section will demonstrate the tangible benefits and practical applications of the CRM.
  
-## Testing Procedures
-
-This section outlines the procedures for testing the CRM for Healthcare Leads to ensure its functionality, performance, and security.
- 
  To ensure the CRM functions as expected and meets quality standards, the following types of testing should be conducted:
  
  ### Unit Testing
@@ -357,13 +684,6 @@ This section outlines the procedures for testing the CRM for Healthcare Leads to
  ### Accessibility Testing
  *   **Purpose:** To ensure the CRM is usable by individuals with disabilities.
  *   **Procedure:** Test the application against accessibility standards (e.g., WCAG). Use accessibility testing tools and manual testing with assistive technologies (like screen readers).
- *   **Frequency:** Conduct periodically and when making significant changes to the user interface.
-
-
-This section is intended to showcase real-world examples of how the CRM for Healthcare Leads can be effectively utilized by different healthcare organizations.
-
-*(Note: Specific case studies and use cases demonstrating the CRM\'s application in various scenarios should be added here.)*
-
 
 
 
@@ -554,8 +874,6 @@ A: We welcome contributions! Please refer to the [Contributing](#contributing) s
 A: The `summarize-lead-flow` endpoint triggers an AI process to generate a concise summary of a lead's information, helping users quickly understand key details without reviewing all data manually. More details can be found in the [API Endpoints](#api-endpoints) section.
 
 
-## API Endpoints
-
 This section outlines the available API endpoints in the CRM project.
 \n
 ### Summarize Lead Flow
@@ -611,8 +929,6 @@ This section provides solutions to common issues you might encounter while setti
 
 **Request Body/Parameters:** (Describe the expected input, e.g., a JSON object containing the lead ID)
 
-**Response:** (Describe the expected output, e.g., a JSON object containing the generated summary)
-
 *(Note: Specific implementation details regarding the exact endpoint URL, request/response format, and any required authentication would be available in the API documentation or source code.)*
 
 ## Future Enhancements
@@ -632,8 +948,6 @@ We have several exciting features and improvements planned for the CRM for Healt
 
 These are just some of the potential areas for future development. The project roadmap will be guided by user feedback and the evolving needs of healthcare organizations. We are committed to continuously improving the CRM to provide the best possible solution for managing healthcare leads.
 
-
-## Deployment Procedures
 
 This section outlines the procedures for deploying the CRM for Healthcare Leads to the production environment.
 
