@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { updateUserRole } from "@/lib/data"
 import type { User, UserRole } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
+import { useAppContext } from "@/lib/app-context"
 
 const userRoles: UserRole[] = ['Admin', 'Counselor', 'Receptionist', 'Doctor'];
 
@@ -36,10 +37,11 @@ const formSchema = z.object({
 
 type EditUserFormValues = z.infer<typeof formSchema>;
 
-export function EditUserDialog({ children, user, onUserUpdated }: { children: React.ReactNode, user: User, onUserUpdated: (user: User) => void }) {
+export function EditUserDialog({ children, user }: { children: React.ReactNode, user: User }) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast()
+  const { updateUser } = useAppContext();
 
   const form = useForm<EditUserFormValues>({
     resolver: zodResolver(formSchema),
@@ -53,7 +55,7 @@ export function EditUserDialog({ children, user, onUserUpdated }: { children: Re
     try {
         const updatedUser = await updateUserRole(user.id, values.role);
         
-        onUserUpdated(updatedUser);
+        updateUser(updatedUser);
         toast({
             title: "User Updated",
             description: `${user.name}'s role has been changed to ${values.role}.`,

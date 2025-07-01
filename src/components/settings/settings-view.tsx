@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useAppContext } from '@/lib/app-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Edit, Filter, Mail, MessageSquare, PlusCircle, RotateCcw, Tag, Trash2, UserPlus, Workflow } from 'lucide-react'
-import type { CustomFieldDefinition, PipelineStage, WorkflowRule, User, UpdateLeadFieldAction, WorkflowCondition, RoundRobinRule, WorkflowAction } from '@/lib/types'
-import { deleteCustomField, deleteWorkflow, deletePipelineStage, deleteUser, updateWorkflowStatus, deleteRoundRobinRule } from '@/lib/data'
+import { ArrowRight, Edit, Filter, Mail, MessageSquare, PlusCircle, Tag, Trash2, UserPlus, Workflow } from 'lucide-react'
+import type { CustomFieldDefinition, PipelineStage, WorkflowRule, User, UpdateLeadFieldAction, WorkflowCondition, WorkflowAction, RoundRobinRule } from '@/lib/types'
+import { deleteCustomField as deleteCustomFieldFromDb, deleteWorkflow as deleteWorkflowFromDb, deletePipelineStage as deletePipelineStageFromDb, deleteUser as deleteUserFromDb, updateWorkflowStatus, deleteRoundRobinRule as deleteRoundRobinRuleFromDb } from '@/lib/data'
 import { AddCustomFieldDialog } from '@/components/settings/add-custom-field-dialog'
 import { AddStageDialog } from '@/components/settings/add-stage-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -30,15 +30,6 @@ import {
 import { AddRoundRobinRuleDialog } from './add-round-robin-rule-dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip'
 
-
-interface SettingsViewProps {
-    initialFields: CustomFieldDefinition[];
-    initialStages: PipelineStage[];
-    initialWorkflows: WorkflowRule[];
-    users: User[];
-    initialRoundRobinRules: RoundRobinRule[];
-}
-
 type FieldWithChildren = CustomFieldDefinition & { children: FieldWithChildren[] };
 
 const buildFieldTree = (fields: CustomFieldDefinition[]): FieldWithChildren[] => {
@@ -51,7 +42,6 @@ const buildFieldTree = (fields: CustomFieldDefinition[]): FieldWithChildren[] =>
         const node = fieldMap.get(field.id);
         if (node) {
             if (field.parentId && fieldMap.has(field.parentId)) {
-                // To prevent infinite loops with bad data, check if it's not its own ancestor
                 let parent = fieldMap.get(field.parentId);
                 let isAncestor = false;
                 while (parent) {
@@ -64,7 +54,7 @@ const buildFieldTree = (fields: CustomFieldDefinition[]): FieldWithChildren[] =>
                 if (!isAncestor) {
                     fieldMap.get(field.parentId)!.children.push(node);
                 } else {
-                     tree.push(node); // treat as top-level if there's a circular dependency
+                     tree.push(node);
                 }
             } else {
                 tree.push(node);
@@ -76,7 +66,7 @@ const buildFieldTree = (fields: CustomFieldDefinition[]): FieldWithChildren[] =>
 };
 
 
-const CustomFieldItem = ({ field, level = 0, onFieldAdded, onFieldDelete }: { field: FieldWithChildren, level?: number, onFieldAdded: (field: CustomFieldDefinition) => void, onFieldDelete: (fieldId: string) => void }) => {
+const CustomFieldItem = ({ field, level = 0, onFieldDelete }: { field: FieldWithChildren, level?: number, onFieldDelete: (fieldId: string) => void }) => {
     return (
         <div className="group">
             <div className={`flex items-center justify-between p-4 ${level === 0 ? 'border-b' : ''}`}>
@@ -89,7 +79,7 @@ const CustomFieldItem = ({ field, level = 0, onFieldAdded, onFieldDelete }: { fi
                 </div>
                 <div className="flex items-center gap-2">
                     {field.required && <Badge variant="outline">Required</Badge>}
-                    <AddCustomFieldDialog onFieldAdded={onFieldAdded} parentId={field.id}>
+                    <AddCustomFieldDialog parentId={field.id}>
                         <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity"><PlusCircle className="mr-2 h-4 w-4" /> Sub-field</Button>
                     </AddCustomFieldDialog>
                     <AlertDialog>
@@ -115,51 +105,36 @@ const CustomFieldItem = ({ field, level = 0, onFieldAdded, onFieldDelete }: { fi
             </div>
             {field.children && field.children.length > 0 && (
                  <div className="border-t">
-                    {field.children.map(child => <CustomFieldItem key={child.id} field={child} level={level + 1} onFieldAdded={onFieldAdded} onFieldDelete={onFieldDelete} />)}
+                    {field.children.map(child => <CustomFieldItem key={child.id} field={child} level={level + 1} onFieldDelete={onFieldDelete} />)}
                 </div>
             )}
         </div>
     )
 }
 
-export function SettingsView({ initialFields, initialStages, initialWorkflows, users: initialUsers, initialRoundRobinRules }: SettingsViewProps) {
-    const [fields, setFields] = useState<CustomFieldDefinition[]>(initialFields);
-    const [stages, setStages] = useState<PipelineStage[]>(initialStages);
-    const [workflows, setWorkflows] = useState<WorkflowRule[]>(initialWorkflows);
-    const [allUsers, setAllUsers] = useState<User[]>(initialUsers);
-    const [roundRobinRules, setRoundRobinRules] = useState<RoundRobinRule[]>(initialRoundRobinRules);
+export function SettingsView() {
+    const {
+        customFields,
+        pipelineStages,
+        workflows,
+        allUsers,
+        roundRobinRules,
+        deleteCustomField,
+        deletePipelineStage,
+        deleteWorkflow,
+        updateWorkflow,
+        deleteUser,
+        deleteRoundRobinRule,
+    } = useAppContext();
+
     const { toast } = useToast();
     
-    const fieldTree = buildFieldTree(fields);
-
-    const handleFieldAdded = (newField: CustomFieldDefinition) => setFields(prev => [...prev, newField]);
-    const handleStageAdded = (newStage: PipelineStage) => setStages(prev => [...prev, newStage]);
-    const handleWorkflowAdded = (newWorkflow: WorkflowRule) => setWorkflows(prev => [...prev, newWorkflow]);
-    const handleUserUpdated = (updatedUser: User) => {
-        setAllUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-    };
-    const handleRoundRobinRuleAdded = (newRule: RoundRobinRule) => setRoundRobinRules(prev => [...prev, newRule]);
+    const fieldTree = buildFieldTree(customFields);
 
     const handleDeleteField = async (fieldId: string) => {
-        const { success } = await deleteCustomField(fieldId);
+        const { success } = await deleteCustomFieldFromDb(fieldId);
         if (success) {
-            const fieldsToDelete = new Set<string>();
-            const queue: string[] = [fieldId];
-            fieldsToDelete.add(fieldId);
-
-            while (queue.length > 0) {
-                const currentId = queue.shift()!;
-                const children = fields.filter(f => f.parentId === currentId);
-                for (const child of children) {
-                    if (!fieldsToDelete.has(child.id)) {
-                        fieldsToDelete.add(child.id);
-                        queue.push(child.id);
-                    }
-                }
-            }
-
-            setFields(prev => prev.filter(f => !fieldsToDelete.has(f.id)));
-
+            deleteCustomField(fieldId);
             toast({ title: "Field Deleted", description: "The custom field and its sub-fields have been removed." });
         } else {
              toast({ title: "Error", description: "Failed to delete field.", variant: "destructive" });
@@ -167,9 +142,9 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
     }
     
     const handleDeleteStage = async (stageId: string) => {
-        const { success } = await deletePipelineStage(stageId);
+        const { success } = await deletePipelineStageFromDb(stageId);
         if (success) {
-            setStages(prev => prev.filter(s => s.id !== stageId));
+            deletePipelineStage(stageId);
             toast({ title: "Stage Deleted", description: "The pipeline stage has been removed." });
         } else {
             toast({ title: "Error", description: "Failed to delete stage.", variant: "destructive" });
@@ -177,9 +152,9 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
     }
 
     const handleDeleteWorkflow = async (workflowId: string) => {
-        const { success } = await deleteWorkflow(workflowId);
+        const { success } = await deleteWorkflowFromDb(workflowId);
         if (success) {
-            setWorkflows(prev => prev.filter(w => w.id !== workflowId));
+            deleteWorkflow(workflowId);
             toast({ title: "Workflow Deleted", description: "The automation rule has been removed." });
         } else {
             toast({ title: "Error", description: "Failed to delete workflow.", variant: "destructive" });
@@ -187,9 +162,9 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
     }
 
     const handleWorkflowStatusChange = async (workflowId: string, newStatus: 'active' | 'inactive') => {
-        const updatedWorkflow = await updateWorkflowStatus(workflowId, newStatus);
-        if (updatedWorkflow) {
-            setWorkflows(prev => prev.map(w => w.id === workflowId ? updatedWorkflow : w));
+        const updatedWorkflowRule = await updateWorkflowStatus(workflowId, newStatus);
+        if (updatedWorkflowRule) {
+            updateWorkflow(updatedWorkflowRule);
             toast({ title: "Workflow Updated", description: `Workflow is now ${newStatus}.` });
         } else {
              toast({ title: "Error", description: "Failed to update workflow status.", variant: "destructive" });
@@ -197,9 +172,9 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
     }
     
     const handleDeleteUser = async (userId: string) => {
-        const { success, message } = await deleteUser(userId);
+        const { success, message } = await deleteUserFromDb(userId);
         if (success) {
-            setAllUsers(prev => prev.filter(u => u.id !== userId));
+            deleteUser(userId);
             toast({ title: "User Deleted", description: "The user has been removed from the system." });
         } else {
              toast({ title: "Error", description: message || "Failed to delete user.", variant: "destructive" });
@@ -207,9 +182,9 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
     }
 
     const handleDeleteRoundRobinRule = async (ruleId: string) => {
-        const { success } = await deleteRoundRobinRule(ruleId);
+        const { success } = await deleteRoundRobinRuleFromDb(ruleId);
         if (success) {
-            setRoundRobinRules(prev => prev.filter(r => r.id !== ruleId));
+            deleteRoundRobinRule(ruleId);
             toast({ title: "Rule Deleted", description: "The assignment rule has been removed." });
         } else {
              toast({ title: "Error", description: "Failed to delete assignment rule.", variant: "destructive" });
@@ -218,7 +193,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
 
     const getActionDisplayValue = (action: UpdateLeadFieldAction) => {
         if (action.field === 'assignedToId') {
-            return initialUsers.find(u => u.id === action.value)?.name || action.value;
+            return allUsers.find(u => u.id === action.value)?.name || action.value;
         }
         return action.value;
     }
@@ -334,7 +309,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                             <CardTitle>Custom Lead Fields</CardTitle>
                             <CardDescription>Create and manage your own fields for lead forms.</CardDescription>
                         </div>
-                        <AddCustomFieldDialog onFieldAdded={handleFieldAdded}>
+                        <AddCustomFieldDialog>
                             <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Field</Button>
                         </AddCustomFieldDialog>
                     </CardHeader>
@@ -344,7 +319,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                 <div className="text-center p-8 text-muted-foreground">No custom fields created yet.</div>
                             ) : (
                                 fieldTree.map((field) => (
-                                    <CustomFieldItem key={field.id} field={field} onFieldAdded={handleFieldAdded} onFieldDelete={handleDeleteField} />
+                                    <CustomFieldItem key={field.id} field={field} onFieldDelete={handleDeleteField} />
                                 ))
                             )}
                         </div>
@@ -359,17 +334,17 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                             <CardTitle>Pipeline Stages</CardTitle>
                             <CardDescription>Define the columns for your sales pipeline.</CardDescription>
                         </div>
-                        <AddStageDialog onStageAdded={handleStageAdded}>
+                        <AddStageDialog>
                             <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Stage</Button>
                         </AddStageDialog>
                     </CardHeader>
                     <CardContent>
                         <div className="rounded-md border">
-                            {stages.length === 0 ? (
+                            {pipelineStages.length === 0 ? (
                                 <div className="text-center p-8 text-muted-foreground">No pipeline stages defined yet.</div>
                             ) : (
-                                stages.map((stage, index) => (
-                                    <div key={stage.id} className={`flex items-center justify-between p-4 ${index < stages.length - 1 ? 'border-b' : ''}`}>
+                                pipelineStages.map((stage, index) => (
+                                    <div key={stage.id} className={`flex items-center justify-between p-4 ${index < pipelineStages.length - 1 ? 'border-b' : ''}`}>
                                         <p className="font-medium">{stage.name}</p>
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>
@@ -405,7 +380,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                             <CardTitle>Workflow Automations</CardTitle>
                             <CardDescription>Create rules to automate repetitive tasks.</CardDescription>
                         </div>
-                        <AddWorkflowDialog onWorkflowAdded={handleWorkflowAdded} pipelineStages={stages} users={initialUsers}>
+                        <AddWorkflowDialog>
                             <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Workflow</Button>
                         </AddWorkflowDialog>
                     </CardHeader>
@@ -453,7 +428,6 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                         </div>
 
                                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-center gap-2 sm:gap-4 text-sm text-muted-foreground">
-                                            {/* WHEN */}
                                             <div className="flex-1 rounded-md border p-3 text-center bg-background w-full">
                                                 <p className="font-medium text-foreground">WHEN</p>
                                                 {rule.trigger.type === 'LEAD_STATUS_CHANGED' ? (
@@ -468,7 +442,6 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                                 )}
                                             </div>
 
-                                            {/* IF */}
                                             {rule.conditions && rule.conditions.length > 0 && (
                                                 <>
                                                     <ArrowRight className="h-6 w-6 shrink-0 text-muted-foreground hidden sm:block" />
@@ -481,7 +454,6 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                             
                                             <ArrowRight className="h-6 w-6 shrink-0 text-muted-foreground hidden sm:block" />
 
-                                            {/* THEN */}
                                             <div className="flex-1 rounded-md border p-3 text-center bg-background w-full">
                                                 <p className="font-medium text-foreground">THEN</p>
                                                 {renderActionDetails(rule.action)}
@@ -525,7 +497,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Badge variant="secondary">{user.role}</Badge>
-                                            <EditUserDialog user={user} onUserUpdated={handleUserUpdated}>
+                                            <EditUserDialog user={user}>
                                                 <Button variant="ghost" size="icon" disabled={['user-2', 'user-ai'].includes(user.id)}>
                                                     <Edit className="h-4 w-4" /><span className="sr-only">Edit {user.name}</span>
                                                 </Button>
@@ -566,7 +538,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                             <CardTitle>Round Robin Assignment</CardTitle>
                             <CardDescription>Automatically distribute new leads from a source to multiple users.</CardDescription>
                         </div>
-                        <AddRoundRobinRuleDialog onRuleAdded={handleRoundRobinRuleAdded} users={initialUsers.filter(u => u.role === 'Counselor' || u.role === 'Receptionist')}>
+                        <AddRoundRobinRuleDialog>
                              <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Rule</Button>
                         </AddRoundRobinRuleDialog>
                     </CardHeader>
@@ -584,7 +556,7 @@ export function SettingsView({ initialFields, initialStages, initialWorkflows, u
                                                 <span className="text-sm text-muted-foreground">Users:</span>
                                                  <div className="flex items-center gap-4">
                                                     {rule.assignments && rule.assignments.map(assignment => {
-                                                        const user = initialUsers.find(u => u.id === assignment.userId);
+                                                        const user = allUsers.find(u => u.id === assignment.userId);
                                                         return user ? (
                                                             <TooltipProvider key={assignment.userId}>
                                                                 <Tooltip>

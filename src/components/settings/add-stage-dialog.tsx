@@ -26,7 +26,8 @@ import {
 import { Input } from "@/components/ui/input"
 import type { PipelineStage } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
-import { addPipelineStage } from "@/lib/data"
+import { addPipelineStage as addPipelineStageToDb } from "@/lib/data"
+import { useAppContext } from "@/lib/app-context"
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Stage name must be at least 2 characters." }),
@@ -34,9 +35,10 @@ const formSchema = z.object({
 
 type AddStageFormValues = z.infer<typeof formSchema>
 
-export function AddStageDialog({ children, onStageAdded }: { children: React.ReactNode, onStageAdded: (newStage: PipelineStage) => void }) {
+export function AddStageDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
+  const { addPipelineStage } = useAppContext();
 
   const form = useForm<AddStageFormValues>({
     resolver: zodResolver(formSchema),
@@ -47,8 +49,8 @@ export function AddStageDialog({ children, onStageAdded }: { children: React.Rea
 
   async function onSubmit(values: AddStageFormValues) {
     try {
-        const newStage = await addPipelineStage({ name: values.name });
-        onStageAdded(newStage);
+        const newStage = await addPipelineStageToDb({ name: values.name });
+        addPipelineStage(newStage);
         toast({
             title: "Stage Added",
             description: `The pipeline stage "${newStage.name}" has been created.`,

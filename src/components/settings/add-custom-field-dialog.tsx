@@ -29,7 +29,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import type { CustomFieldDefinition } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
-import { addCustomField } from "@/lib/data"
+import { addCustomField as addCustomFieldToDb } from "@/lib/data"
+import { useAppContext } from "@/lib/app-context"
 
 const fieldTypes = ['Text', 'Number', 'Date', 'Select'] as const;
 
@@ -51,9 +52,10 @@ const formSchema = z.object({
 
 type AddFieldFormValues = z.infer<typeof formSchema>
 
-export function AddCustomFieldDialog({ children, onFieldAdded, parentId }: { children: React.ReactNode, onFieldAdded: (newField: CustomFieldDefinition) => void, parentId?: string }) {
+export function AddCustomFieldDialog({ children, parentId }: { children: React.ReactNode, parentId?: string }) {
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
+  const { addCustomField } = useAppContext();
 
   const form = useForm<AddFieldFormValues>({
     resolver: zodResolver(formSchema),
@@ -80,8 +82,8 @@ export function AddCustomFieldDialog({ children, onFieldAdded, parentId }: { chi
             fieldData.options = values.options.split(',').map(opt => opt.trim());
         }
 
-        const newField = await addCustomField(fieldData);
-        onFieldAdded(newField);
+        const newField = await addCustomFieldToDb(fieldData);
+        addCustomField(newField);
         toast({
             title: "Field Added",
             description: `The custom field "${newField.label}" has been created.`,

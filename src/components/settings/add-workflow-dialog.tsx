@@ -25,11 +25,12 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { PipelineStage, WorkflowRule, WorkflowTriggerType, WorkflowAction, User, WorkflowCondition, WorkflowConditionField, WorkflowConditionOperator, LeadStage } from "@/lib/types"
+import type { WorkflowRule, WorkflowTriggerType, WorkflowAction, WorkflowCondition, WorkflowConditionField, WorkflowConditionOperator, LeadStage } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
-import { addWorkflow } from "@/lib/data"
+import { addWorkflow as addWorkflowToDb } from "@/lib/data"
 import { Textarea } from "@/components/ui/textarea"
 import { HelpCircle, Mail, MessageSquare, PlusCircle, Trash2 } from "lucide-react"
+import { useAppContext } from "@/lib/app-context"
 
 function PlaceholderHelpDialog() {
     return (
@@ -154,9 +155,10 @@ const leadSources = ['Website Form', 'Facebook Ad', 'Walk-in', 'IVR', 'WhatsApp'
 const inquiryTypes = ['General OPD', 'IVF Journey', 'Surgery Consultation'] as const;
 const leadStages: LeadStage[] = ['Initial Inquiry', 'Consultation Done', 'Procedure Booked', 'Follow-up Required'];
 
-export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, users }: { children: React.ReactNode, onWorkflowAdded: (newWorkflow: WorkflowRule) => void, pipelineStages: PipelineStage[], users: User[] }) {
+export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
+  const { pipelineStages, allUsers, addWorkflow } = useAppContext();
 
   const form = useForm<AddWorkflowFormValues>({
     resolver: zodResolver(formSchema),
@@ -208,8 +210,8 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
             workflowData.trigger.value = values.triggerValue;
         }
 
-        const newWorkflow = await addWorkflow(workflowData);
-        onWorkflowAdded(newWorkflow);
+        const newWorkflow = await addWorkflowToDb(workflowData);
+        addWorkflow(newWorkflow);
         toast({
             title: "Workflow Created",
             description: `The automation rule "${newWorkflow.name}" has been added.`,
@@ -487,7 +489,7 @@ export function AddWorkflowDialog({ children, onWorkflowAdded, pipelineStages, u
                                             </FormControl>
                                             <SelectContent>
                                             {actionField === 'status' && pipelineStages.map(stage => <SelectItem key={stage.id} value={stage.name}>{stage.name}</SelectItem>)}
-                                            {actionField === 'assignedToId' && users.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                                            {actionField === 'assignedToId' && allUsers.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />

@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import type { User, RoundRobinRule, LeadSource, RoundRobinAssignment } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
-import { addRoundRobinRule } from "@/lib/data"
+import { addRoundRobinRule as addRoundRobinRuleToDb } from "@/lib/data"
+import { useAppContext } from "@/lib/app-context"
 
 const leadSources = ['Website Form', 'Facebook Ad', 'Walk-in', 'IVR', 'WhatsApp'] as const;
 
@@ -30,16 +31,17 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function AddRoundRobinRuleDialog({ children, onRuleAdded, users }: { children: React.ReactNode, onRuleAdded: (rule: RoundRobinRule) => void, users: User[] }) {
+export function AddRoundRobinRuleDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { assignableUsers, addRoundRobinRule } = useAppContext();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       source: undefined,
-      assignments: users.map(u => ({ userId: u.id, enabled: false, weight: 1 })),
+      assignments: assignableUsers.map(u => ({ userId: u.id, enabled: false, weight: 1 })),
     },
   });
 
@@ -53,10 +55,10 @@ export function AddRoundRobinRuleDialog({ children, onRuleAdded, users }: { chil
       form.reset({
         name: "",
         source: undefined,
-        assignments: users.map(u => ({ userId: u.id, enabled: false, weight: 1 })),
+        assignments: assignableUsers.map(u => ({ userId: u.id, enabled: false, weight: 1 })),
       });
     }
-  }, [open, users, form]);
+  }, [open, assignableUsers, form]);
 
 
   async function onSubmit(values: FormValues) {
@@ -74,12 +76,12 @@ export function AddRoundRobinRuleDialog({ children, onRuleAdded, users }: { chil
             return;
         }
 
-        const newRule = await addRoundRobinRule({
+        const newRule = await addRoundRobinRuleToDb({
             name: values.name,
             source: values.source,
             assignments: finalAssignments,
         });
-        onRuleAdded(newRule);
+        addRoundRobinRule(newRule);
         toast({
             title: "Rule Added",
             description: `The rule "${newRule.name}" has been created.`,
@@ -152,7 +154,7 @@ export function AddRoundRobinRuleDialog({ children, onRuleAdded, users }: { chil
                   </div>
                   <div className="space-y-3 max-h-[25vh] overflow-y-auto pr-2">
                     {fields.map((item, index) => {
-                      const user = users.find(u => u.id === item.userId);
+                      const user = assignableUsers.find(u => u.id === item.userId);
                       if (!user) return null;
                       return (
                         <div key={item.id} className="flex items-center gap-4 p-2 border rounded-md bg-background">
