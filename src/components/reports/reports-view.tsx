@@ -26,7 +26,8 @@ type TasksCompletedData = {
   userId: string;
   name: string;
   avatarUrl: string;
-  count: number;
+  counts: Record<Task['type'], number>;
+  total: number;
 }[]
 
 type PendingTasksData = {
@@ -146,7 +147,25 @@ export function ReportsView({
                             <span className="font-medium">{userStats.name}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right font-bold text-lg">{userStats.count}</TableCell>
+                        <TableCell className="text-right">
+                           <div className="flex items-center justify-end gap-x-3 gap-y-1 flex-wrap">
+                                <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                                    <Phone className="h-3 w-3" />
+                                    <span className="font-medium text-foreground">{userStats.counts.Call}</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                                    <MessageSquare className="h-3 w-3" />
+                                    <span className="font-medium text-foreground">{userStats.counts.Message}</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                                    <Calendar className="h-3 w-3" />
+                                    <span className="font-medium text-foreground">{userStats.counts.Appointment}</span>
+                                </div>
+                                <div className="font-bold text-lg min-w-[2rem] text-right">
+                                  {userStats.total}
+                                </div>
+                            </div>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}

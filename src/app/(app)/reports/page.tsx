@@ -1,3 +1,5 @@
+'use server'
+
 import { getLeads, getUsers, getTasks } from '@/lib/data'
 import type { Lead, Task, User } from '@/lib/types'
 import { ReportsView } from '@/components/reports/reports-view'
@@ -49,21 +51,28 @@ export default async function ReportsPage() {
         task.completedBy
     );
     
-    const countsByUser = completedToday.reduce<Record<string, number>>((acc, task) => {
+    type TaskCounts = Record<Task['type'], number>;
+
+    const countsByUser = completedToday.reduce<Record<string, TaskCounts>>((acc, task) => {
         const userId = task.completedBy!.id;
-        acc[userId] = (acc[userId] || 0) + 1;
+        if (!acc[userId]) {
+            acc[userId] = { Call: 0, Message: 0, Appointment: 0 };
+        }
+        acc[userId][task.type]++;
         return acc;
     }, {});
     
-    return Object.entries(countsByUser).map(([userId, count]) => {
+    return Object.entries(countsByUser).map(([userId, counts]) => {
         const user = users.find(u => u.id === userId);
+        const total = Object.values(counts).reduce((a, b) => a + b, 0);
         return {
             userId,
             name: user ? user.name : 'Unknown User',
             avatarUrl: user ? user.avatarUrl : '',
-            count
+            counts,
+            total
         };
-    }).sort((a,b) => b.count - a.count); // Sort by most tasks completed
+    }).sort((a,b) => b.total - a.total); // Sort by most tasks completed
 
   })();
 
@@ -71,7 +80,7 @@ export default async function ReportsPage() {
     if (!tasks.length || !users.length) return [];
     
     const pendingAndOverdue = tasks.filter(task => 
-        task.status === 'Pending' || task.status === 'Overdue'
+        (task.status === 'Pending' || task.status === 'Overdue') && task.assignedTo
     );
     
     type TaskCounts = {
