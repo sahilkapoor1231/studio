@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { useAppContext } from "@/lib/app-context"
 
-const allLeadSources: LeadSource[] = ['Website Form', 'Facebook Ad', 'Walk-in', 'IVR', 'WhatsApp', 'Zapier'];
+const allLeadSources: LeadSource[] = ['Website Form', 'Facebook Ad', 'Walk-in', 'IVR', 'WhatsApp', 'Zapier', 'LinkedIn', 'Calendly'];
 
 type FiltersState = {
     sources: string[];

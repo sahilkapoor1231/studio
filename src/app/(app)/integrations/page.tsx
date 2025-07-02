@@ -84,67 +84,67 @@ const integrationsData: Integration[] = [
     {
         id: "zapier",
         name: "Zapier",
-        description: "Generate a webhook URL to send leads from any Zapier-connected app.",
+        description: "Connect this CRM to thousands of apps. The webhook will instantly capture lead data sent from any Zapier workflow.",
         logo: <ZapierLogo />,
     },
     {
         id: 'email',
         name: 'Lead Capture Email',
-        description: "Generate a unique email. Any email sent here will create a new lead.",
+        description: "Set up a rule in your email client to auto-forward new lead notifications to this unique address. The system will parse the email and create a new lead.",
         logo: <Mail className="w-10 h-10 text-primary" />,
     },
     {
         id: "whatsapp",
         name: "WhatsApp Business API",
-        description: "Connect your WhatsApp Business account to enable messaging workflows.",
+        description: "Connect your WhatsApp Business account using your API key to enable automated messaging workflows from within the CRM.",
         logo: <WhatsAppLogo />,
     },
     {
         id: 'google-ads',
         name: 'Google Ads',
-        description: 'Generate a unique email to use as the endpoint in your Google Ads Lead Form extensions.',
+        description: "Use this unique email as the endpoint in your Google Ads Lead Form extensions. Leads will be captured in real-time.",
         logo: <GoogleAdsLogo />,
     },
      {
         id: "meta",
         name: "Meta Ads (Facebook & Instagram)",
-        description: "Securely connect your account via OAuth to capture leads from your Meta lead forms.",
+        description: "Securely connect your account via a simulated OAuth flow to capture leads from your Meta lead forms as they come in.",
         logo: <MetaLogo />,
     },
     {
         id: 'google-analytics',
         name: 'Google Analytics (GA4)',
-        description: 'Add your GA4 Measurement ID to track lead sources and conversions.',
+        description: 'Add your GA4 Measurement ID to track lead sources, web interactions, and goal conversions directly within your analytics property.',
         logo: <GoogleAnalyticsLogo />,
     },
     {
         id: 'linkedin',
         name: 'LinkedIn Lead Gen Forms',
-        description: 'Connect your LinkedIn account via OAuth to capture leads from your B2B ad campaigns.',
+        description: "Use a simulated OAuth flow to connect your LinkedIn account and automatically capture leads from your B2B ad campaigns.",
         logo: <LinkedInLogo />,
     },
     {
         id: 'calendly',
         name: 'Calendly',
-        description: 'Generate a webhook URL to automatically log meetings booked via Calendly.',
+        description: 'Add this webhook to your Calendly settings to automatically create tasks or leads when a new meeting is scheduled.',
         logo: <CalendlyLogo />,
     },
     {
         id: 'hubspot',
         name: 'HubSpot CRM Sync',
-        description: 'Enter your HubSpot API key to enable a two-way sync for leads and contacts.',
+        description: 'Enter your HubSpot API key to enable a (simulated) two-way sync for leads and contacts between both platforms.',
         logo: <HubSpotLogo />,
     },
     {
         id: 'bi-tools',
         name: 'BI Tool Connector',
-        description: 'Generate an API key to pull CRM data into Looker, Tableau, or Power BI.',
+        description: 'Generate an API key to pull CRM data into Looker, Tableau, or Power BI for advanced custom reporting and analysis.',
         logo: <BarChart className="w-10 h-10 text-primary" />,
     },
     {
         id: 'smtp',
         name: 'SMTP / Email Sending',
-        description: 'Configure your own SMTP server to send emails directly from the CRM.',
+        description: 'Configure your own SMTP server to send emails directly from the CRM, giving you full control over your email deliverability.',
         logo: <Send className="w-10 h-10 text-primary" />,
     },
 ];
@@ -296,7 +296,7 @@ export default function IntegrationsPage() {
                     <CardContent className="flex-grow">
                         <Label htmlFor={`url-${integration.id}`}>
                             {['zapier', 'calendly'].includes(integration.id) ? 'Your Webhook URL' : 
-                             ['email', 'google-ads'].includes(integration.id) ? 'Your Unique Email' :
+                             ['email', 'google-ads'].includes(integration.id) ? 'Your Unique Email Address' :
                              integration.id === 'google-analytics' ? 'Your Measurement ID' :
                              'Your API Key'}
                         </Label>
