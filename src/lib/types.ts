@@ -179,7 +179,7 @@ export type RoundRobinRule = {
 // INTEGRATION TYPES
 export type IntegrationSetting = {
     userId: string;
-    service: 'zapier' | 'email' | 'google-ads';
-    value: string; // The webhook URL or email address
+    service: 'zapier' | 'email' | 'google-ads' | 'whatsapp';
+    value: string; // The webhook URL, email address, or API key
     token?: string; // The secret part of the webhook URL
 }

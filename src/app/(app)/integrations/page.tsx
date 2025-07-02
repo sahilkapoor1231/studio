@@ -21,6 +21,10 @@ const ZapierLogo = () => (
     </svg>
 )
 
+const WhatsAppLogo = () => (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.35 3.43 16.84L2.05 21.8L7.18 20.45C8.62 21.21 10.28 21.62 12.04 21.62H12.05C17.5 21.62 21.95 17.17 21.95 11.72C21.95 9.12 20.92 6.72 19.16 4.96C17.4 3.2 14.8 2.13 12.04 2.13V2Z" fill="#25D366"/><path d="M9.73 7.95C9.53 7.54 9.32 7.53 9.15 7.53C9.01 7.53 8.81 7.58 8.63 7.75C8.46 7.92 7.93 8.41 7.93 9.33C7.93 10.25 8.66 11.12 8.78 11.27C8.91 11.42 10.27 13.56 12.35 14.38C14.44 15.2 14.44 14.88 14.85 14.84C15.26 14.8 16.14 14.32 16.32 13.84C16.5 13.36 16.5 12.96 16.44 12.83C16.38 12.7 16.23 12.63 16.03 12.51C15.82 12.38 14.89 11.93 14.7 11.85C14.51 11.78 14.36 11.73 14.22 11.93C14.07 12.13 13.66 12.63 13.53 12.78C13.41 12.93 13.28 12.96 13.08 12.83C12.87 12.71 12.08 12.45 11.13 11.6C10.37 10.92 9.89 10.1 9.73 9.83C9.56 9.56 9.68 9.44 9.79 9.33C9.89 9.23 10.02 9.07 10.12 8.95C10.22 8.83 10.27 8.73 10.32 8.63C10.37 8.53 10.32 8.43 10.27 8.35C10.22 8.28 9.92 7.95 9.73 7.95Z" fill="white"/></svg>
+)
+
 const MetaLogo = () => (
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M22.675 0H1.325C0.593 0 0 0.593 0 1.325V22.676C0 23.407 0.593 24 1.325 24H12.82V14.706H9.692V11.084H12.82V8.413C12.82 5.313 14.713 3.625 17.479 3.625C18.802 3.625 19.922 3.727 20.222 3.775V7.25H18.356C16.852 7.25 16.563 8.013 16.563 8.845V11.084H20.063L19.585 14.706H16.563V24H22.675C23.407 24 24 23.407 24 22.675V1.325C24 0.593 23.407 0 22.675 0Z" fill="#1877F2"/>
@@ -38,7 +42,7 @@ const GoogleAdsLogo = () => (
 )
 
 
-type IntegrationId = 'zapier' | 'email' | 'meta' | 'google-ads';
+type IntegrationId = 'zapier' | 'email' | 'meta' | 'google-ads' | 'whatsapp';
 type Integration = {
     id: IntegrationId;
     name: string;
@@ -52,6 +56,12 @@ const integrationsData: Integration[] = [
         name: "Zapier",
         description: "Generate a webhook URL to send leads from any Zapier-connected app.",
         logo: <ZapierLogo />,
+    },
+    {
+        id: "whatsapp",
+        name: "WhatsApp Business API",
+        description: "Connect your WhatsApp Business account using an API key to enable automated messaging workflows.",
+        logo: <WhatsAppLogo />,
     },
     {
         id: "email",
@@ -74,14 +84,17 @@ const integrationsData: Integration[] = [
 ];
 
 type IntegrationSetting = {
+    userId: string,
     service: IntegrationId,
     value: string;
+    token?: string;
 }
 
 export default function IntegrationsPage() {
     const { toast } = useToast();
     const [settings, setSettings] = useState<IntegrationSetting[]>([]);
     const [isLoading, setIsLoading] = useState<Partial<Record<IntegrationId, boolean>>>({});
+    const [inputValues, setInputValues] = useState<Partial<Record<IntegrationId, string>>>({});
 
     useEffect(() => {
         const loadSettings = async () => {
@@ -110,7 +123,14 @@ export default function IntegrationsPage() {
                 setSettings(prev => prev.filter(s => s.service !== id));
                 toast({ title: `Integration disconnected.`});
             } else { // Connect
-                const newSetting = await createIntegrationSetting('user-2', id);
+                const userValue = inputValues[id];
+                if (id === 'whatsapp' && !userValue) {
+                    toast({ title: "API Key Required", description: "Please enter your WhatsApp API key.", variant: "destructive" });
+                    setIsLoading(prev => ({ ...prev, [id]: false }));
+                    return;
+                }
+
+                const newSetting = await createIntegrationSetting('user-2', id, userValue);
                 if (newSetting) {
                     setSettings(prev => [...prev, newSetting]);
                     toast({ title: "Integration Connected!" });
@@ -151,17 +171,27 @@ export default function IntegrationsPage() {
                 </>
             );
         }
+
+        const isGenerated = ['zapier', 'email', 'google-ads'].includes(integration.id);
         
         if (setting) {
+            const displayValue = integration.id === 'whatsapp' 
+                ? `**********${setting.value.slice(-4)}` 
+                : setting.value;
+
             return (
                  <>
                     <CardContent className="flex-grow">
-                        <Label htmlFor={`url-${integration.id}`}>Your unique {integration.id === 'zapier' ? 'webhook URL' : 'email address'}</Label>
+                        <Label htmlFor={`url-${integration.id}`}>
+                            {isGenerated ? 'Your unique address' : 'Your API Key'}
+                        </Label>
                         <div className="flex items-center gap-2 mt-1">
-                            <Input id={`url-${integration.id}`} readOnly value={setting.value} className="bg-muted" />
-                            <Button variant="outline" size="icon" onClick={() => copyToClipboard(setting.value)}>
-                                <ClipboardCopy className="h-4 w-4" />
-                            </Button>
+                            <Input id={`url-${integration.id}`} readOnly value={displayValue} className="bg-muted" />
+                             {isGenerated && (
+                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(setting.value)}>
+                                    <ClipboardCopy className="h-4 w-4" />
+                                </Button>
+                             )}
                         </div>
                         <p className="mt-4 text-sm text-green-600 flex items-center gap-2">
                             <CheckCircle className="h-4 w-4" />
@@ -183,21 +213,48 @@ export default function IntegrationsPage() {
             );
         }
 
+        if (isGenerated) {
+            return (
+                <>
+                    <CardContent className="flex-grow">
+                        <p className="text-sm text-muted-foreground">
+                            Click 'Connect' to generate your unique address.
+                        </p>
+                    </CardContent>
+                    <CardFooter>
+                        <Button 
+                            onClick={() => handleConnectToggle(integration.id)}
+                            className="w-32"
+                            disabled={loading}
+                        >
+                            {loading ? <Loader2 className="animate-spin" /> : <><CheckCircle className="mr-2" /> Connect</>}
+                        </Button>
+                    </CardFooter>
+                </>
+            );
+        }
+
+        // Handle API Key input for WhatsApp
         return (
             <>
                 <CardContent className="flex-grow">
-                    <p className="text-sm text-muted-foreground">
-                        {integration.id === 'zapier' ? 'Generate a webhook URL to receive leads.' : 'Generate a unique email to forward leads to.'}
-                    </p>
+                    <Label htmlFor={`apikey-${integration.id}`}>Your API Key</Label>
+                    <Input 
+                        id={`apikey-${integration.id}`}
+                        type="password"
+                        placeholder="Enter your API key"
+                        className="mt-1"
+                        value={inputValues[integration.id] || ''}
+                        onChange={(e) => setInputValues(prev => ({...prev, [integration.id]: e.target.value}))}
+                    />
                 </CardContent>
                 <CardFooter>
-                    <Button 
+                     <Button 
                         onClick={() => handleConnectToggle(integration.id)}
                         className="w-32"
                         disabled={loading}
                     >
-                        {loading ? <Loader2 className="animate-spin" /> : 
-                        <><CheckCircle className="mr-2" /> Connect</>}
+                        {loading ? <Loader2 className="animate-spin" /> : <><CheckCircle className="mr-2" /> Connect</>}
                     </Button>
                 </CardFooter>
             </>

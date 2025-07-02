@@ -665,7 +665,7 @@ export const findUserByIntegrationToken = async (token: string, service: 'zapier
     return users.find(u => u.id === setting.userId);
 }
 
-export const createIntegrationSetting = async (userId: string, service: IntegrationSetting['service']): Promise<IntegrationSetting | null> => {
+export const createIntegrationSetting = async (userId: string, service: IntegrationSetting['service'], userValue?: string): Promise<IntegrationSetting | null> => {
     await mockDelay(300);
     if (integrationSettings.some(s => s.userId === userId && s.service === service)) {
         throw new Error(`Setting for ${service} already exists for this user.`);
@@ -681,6 +681,11 @@ export const createIntegrationSetting = async (userId: string, service: Integrat
     } else if (service === 'email' || service === 'google-ads') {
         const uniquePart = randomBytes(4).toString('hex');
         newSetting = { userId, service, value: `${service}-${uniquePart}@leadflow.app` };
+    } else if (service === 'whatsapp') {
+        if (!userValue) {
+            throw new Error('API Key is required for WhatsApp integration.');
+        }
+        newSetting = { userId, service, value: userValue };
     } else {
         return null;
     }
