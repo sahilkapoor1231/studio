@@ -16,6 +16,14 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { useAppContext } from "@/lib/app-context"
 
+const allLeadSources: LeadSource[] = ['Website Form', 'Facebook Ad', 'Walk-in', 'IVR', 'WhatsApp', 'Zapier'];
+
+type FiltersState = {
+    sources: string[];
+    assignedTo: string[];
+    statuses: string[];
+};
+
 export default function DashboardPage() {
   const [allLeads, setAllLeads] = useState<Lead[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
@@ -25,7 +33,9 @@ export default function DashboardPage() {
   const searchQuery = searchParams.get('q');
   const importFileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { assignableUsers } = useAppContext();
+  const { assignableUsers, pipelineStages } = useAppContext();
+
+  const [filters, setFilters] = useState<FiltersState>({ sources: [], assignedTo: [], statuses: [] });
 
   useEffect(() => {
     async function loadLeads() {
@@ -38,45 +48,66 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
+    let tempLeads = [...allLeads];
+
+    // Filter by search query first
     if (searchQuery) {
       const lowercasedQuery = searchQuery.toLowerCase();
-      const results = allLeads.filter(lead => 
+      tempLeads = tempLeads.filter(lead => 
         lead.name.toLowerCase().includes(lowercasedQuery) ||
         lead.email.toLowerCase().includes(lowercasedQuery) ||
-        lead.phone.includes(searchQuery) // phone is not always case-insensitive
+        lead.phone.includes(searchQuery)
       );
-      setFilteredLeads(results);
-    } else {
-      setFilteredLeads(allLeads);
     }
-  }, [searchQuery, allLeads]);
+
+    // Then, filter by dropdown filters
+    if (filters.sources.length > 0) {
+        tempLeads = tempLeads.filter(lead => filters.sources.includes(lead.source));
+    }
+    if (filters.assignedTo.length > 0) {
+        tempLeads = tempLeads.filter(lead => filters.assignedTo.includes(lead.assignedTo.id));
+    }
+    if (filters.statuses.length > 0) {
+        tempLeads = tempLeads.filter(lead => filters.statuses.includes(lead.status));
+    }
+
+    setFilteredLeads(tempLeads);
+  }, [searchQuery, allLeads, filters]);
+
+
+  const handleFilterChange = (filterType: keyof FiltersState, value: string) => {
+    setFilters(prev => {
+        const newValues = new Set(prev[filterType]);
+        if (newValues.has(value)) {
+            newValues.delete(value);
+        } else {
+            newValues.add(value);
+        }
+        return {
+            ...prev,
+            [filterType]: Array.from(newValues),
+        };
+    });
+  };
+
+  const clearFilters = () => {
+    setFilters({ sources: [], assignedTo: [], statuses: [] });
+  }
 
   const handleLeadAdded = (newLead: Lead) => {
-    const updatedLeads = [newLead, ...allLeads];
-    setAllLeads(updatedLeads);
-    if (!searchQuery) {
-      setFilteredLeads(updatedLeads);
-    }
+    setAllLeads(prevLeads => [newLead, ...prevLeads]);
   }
 
   const handleLeadUpdated = (updatedLead: Lead) => {
-    const updatedLeads = allLeads.map(l => l.id === updatedLead.id ? updatedLead : l)
-    setAllLeads(updatedLeads);
-    if (!searchQuery) {
-      setFilteredLeads(updatedLeads);
-    }
+    setAllLeads(prevLeads => prevLeads.map(l => l.id === updatedLead.id ? updatedLead : l));
   }
 
   const handleLeadDeleted = (leadId: string) => {
-    const updatedLeads = allLeads.filter(l => l.id !== leadId)
-    setAllLeads(updatedLeads);
-    if (!searchQuery) {
-      setFilteredLeads(updatedLeads);
-    }
+    setAllLeads(prevLeads => prevLeads.filter(l => l.id !== leadId));
   }
 
   const handleExport = () => {
-    const dataToExport = allLeads.map(lead => ({
+    const dataToExport = filteredLeads.map(lead => ({
       ID: lead.id,
       Name: lead.name,
       Email: lead.email,
@@ -123,7 +154,6 @@ export default function DashboardPage() {
             let errorCount = 0;
             const newLeads: Lead[] = [];
 
-            // A very simple validation, in a real app this would be more robust
             const requiredFields = ['name', 'email', 'phone', 'source', 'status'];
 
             for (const row of results.data as any[]) {
@@ -140,7 +170,6 @@ export default function DashboardPage() {
                         phone: row.phone,
                         source: row.source,
                         status: row.status,
-                        // For simplicity, assign to first available user or use a default
                         assignedToId: assignableUsers[0]?.id || '',
                         inquiryType: 'General OPD',
                         stage: 'Initial Inquiry' as LeadStage
@@ -173,7 +202,6 @@ export default function DashboardPage() {
         }
     });
 
-    // Reset file input
     if (event.target) {
         event.target.value = '';
     }
@@ -185,7 +213,7 @@ export default function DashboardPage() {
   const qualifiedLeadsCount = leadsForStats.filter(l => l.status === 'Qualified').length;
   const convertedLeadsCount = leadsForStats.filter(l => l.status === 'Converted').length;
 
-  const currentLeads = searchQuery ? filteredLeads : allLeads;
+  const currentLeads = filteredLeads;
 
   return (
     <div className="space-y-6">
@@ -277,7 +305,14 @@ export default function DashboardPage() {
                   <TabsTrigger value="contacted">Contacted</TabsTrigger>
                   <TabsTrigger value="qualified">Qualified</TabsTrigger>
               </TabsList>
-              <LeadFilters />
+              <LeadFilters 
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                clearFilters={clearFilters}
+                sources={allLeadSources}
+                users={assignableUsers}
+                statuses={pipelineStages.map(s => s.name).filter(s => s !== 'No Go')}
+              />
           </div>
           <TabsContent value="all" className="mt-4">
             <LeadTable leads={currentLeads} onLeadUpdated={handleLeadUpdated} onLeadDeleted={handleLeadDeleted} />
