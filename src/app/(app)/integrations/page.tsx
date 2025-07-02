@@ -21,6 +21,12 @@ const WhatsAppLogo = () => (
     </svg>
 )
 
+const MetaLogo = () => (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.675 0H1.325C0.593 0 0 0.593 0 1.325V22.676C0 23.407 0.593 24 1.325 24H12.82V14.706H9.692V11.084H12.82V8.413C12.82 5.313 14.713 3.625 17.479 3.625C18.802 3.625 19.922 3.727 20.222 3.775V7.25H18.356C16.852 7.25 16.563 8.013 16.563 8.845V11.084H20.063L19.585 14.706H16.563V24H22.675C23.407 24 24 23.407 24 22.675V1.325C24 0.593 23.407 0 22.675 0Z" fill="#1877F2"/>
+    </svg>
+)
+
 
 export default function IntegrationsPage() {
     const integrations = [
@@ -45,6 +51,14 @@ export default function IntegrationsPage() {
             logo: <WhatsAppLogo />,
             apiKeyLabel: "WhatsApp API Key",
             placeholder: "Enter your WhatsApp Business API Key"
+        },
+        {
+            name: "Meta Ads (Facebook & Instagram)",
+            description: "Automatically capture leads from your Facebook & Instagram lead forms.",
+            logo: <MetaLogo />,
+            apiKeyLabel: "Your Meta Webhook URL",
+            placeholder: "https://your-crm-instance.com/api/webhooks/meta",
+            isInput: false,
         },
     ];
 
