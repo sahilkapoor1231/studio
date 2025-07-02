@@ -1,24 +1,31 @@
 'use client'
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useSearchParams } from "next/navigation"
+import Papa from "papaparse"
 import { Button } from "@/components/ui/button"
-import { Download, PlusCircle, Upload } from "lucide-react"
+import { Download, PlusCircle, Upload, Loader2 } from "lucide-react"
 import { LeadTable } from "@/components/dashboard/lead-table"
-import { getLeads } from "@/lib/data"
+import { getLeads, addLead } from "@/lib/data"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LeadFilters } from "@/components/dashboard/lead-filters"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import type { Lead } from "@/lib/types"
+import type { Lead, NewLeadPayload, LeadStage, LeadSource } from "@/lib/types"
 import { AddLeadDialog } from "@/components/add-lead-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useToast } from "@/hooks/use-toast"
+import { useAppContext } from "@/lib/app-context"
 
 export default function DashboardPage() {
   const [allLeads, setAllLeads] = useState<Lead[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isImporting, setIsImporting] = useState(false);
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get('q');
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+  const { assignableUsers } = useAppContext();
 
   useEffect(() => {
     async function loadLeads() {
@@ -47,20 +54,131 @@ export default function DashboardPage() {
   const handleLeadAdded = (newLead: Lead) => {
     const updatedLeads = [newLead, ...allLeads];
     setAllLeads(updatedLeads);
-    setFilteredLeads(updatedLeads);
+    if (!searchQuery) {
+      setFilteredLeads(updatedLeads);
+    }
   }
 
   const handleLeadUpdated = (updatedLead: Lead) => {
     const updatedLeads = allLeads.map(l => l.id === updatedLead.id ? updatedLead : l)
     setAllLeads(updatedLeads);
-    setFilteredLeads(updatedLeads);
+    if (!searchQuery) {
+      setFilteredLeads(updatedLeads);
+    }
   }
 
   const handleLeadDeleted = (leadId: string) => {
     const updatedLeads = allLeads.filter(l => l.id !== leadId)
     setAllLeads(updatedLeads);
-    setFilteredLeads(updatedLeads);
+    if (!searchQuery) {
+      setFilteredLeads(updatedLeads);
+    }
   }
+
+  const handleExport = () => {
+    const dataToExport = allLeads.map(lead => ({
+      ID: lead.id,
+      Name: lead.name,
+      Email: lead.email,
+      Phone: lead.phone,
+      Source: lead.source,
+      Status: lead.status,
+      "Assigned To": lead.assignedTo.name,
+      "Last Contacted": lead.lastContacted,
+    }));
+
+    const csv = Papa.unparse(dataToExport);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'leads_export.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  }
+
+  const handleImportClick = () => {
+    importFileRef.current?.click();
+  }
+  
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    toast({
+        title: "Importing Leads",
+        description: "Your file is being processed. This may take a moment."
+    });
+
+    Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: async (results) => {
+            let successCount = 0;
+            let errorCount = 0;
+            const newLeads: Lead[] = [];
+
+            // A very simple validation, in a real app this would be more robust
+            const requiredFields = ['name', 'email', 'phone', 'source', 'status'];
+
+            for (const row of results.data as any[]) {
+                const hasRequiredFields = requiredFields.every(field => row[field]);
+                if (!hasRequiredFields) {
+                    errorCount++;
+                    continue;
+                }
+                
+                try {
+                    const payload: NewLeadPayload = {
+                        name: row.name,
+                        email: row.email,
+                        phone: row.phone,
+                        source: row.source,
+                        status: row.status,
+                        // For simplicity, assign to first available user or use a default
+                        assignedToId: assignableUsers[0]?.id || '',
+                        inquiryType: 'General OPD',
+                        stage: 'Initial Inquiry' as LeadStage
+                    };
+                    const newLead = await addLead(payload);
+                    newLeads.push(newLead);
+                    successCount++;
+                } catch (e) {
+                    errorCount++;
+                    console.error("Error importing row:", row, e);
+                }
+            }
+            
+            setAllLeads(prev => [...newLeads, ...prev]);
+
+            setIsImporting(false);
+            toast({
+                title: "Import Complete",
+                description: `${successCount} leads imported successfully. ${errorCount} rows failed.`
+            });
+        },
+        error: (error) => {
+            setIsImporting(false);
+            toast({
+                title: "Import Failed",
+                description: "There was an error parsing your CSV file.",
+                variant: "destructive"
+            });
+            console.error(error);
+        }
+    });
+
+    // Reset file input
+    if (event.target) {
+        event.target.value = '';
+    }
+  };
+
 
   const leadsForStats = allLeads;
   const newLeadsCount = leadsForStats.filter(l => l.status === 'New').length;
@@ -71,17 +189,18 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <input type="file" ref={importFileRef} className="hidden" accept=".csv" onChange={handleFileImport} />
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground">Welcome back! Here's an overview of your leads.</p>
         </div>
         <div className="flex gap-2">
-            <Button variant="outline">
-                <Upload className="mr-2 h-4 w-4" />
+            <Button variant="outline" onClick={handleImportClick} disabled={isImporting}>
+                {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Upload className="mr-2 h-4 w-4" />}
                 Import
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExport}>
                 <Download className="mr-2 h-4 w-4" />
                 Export
             </Button>
