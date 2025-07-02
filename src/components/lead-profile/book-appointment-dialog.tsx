@@ -73,7 +73,7 @@ export function BookAppointmentDialog({ children, lead }: { children: React.Reac
         );
 
         for (const task of overdueTasksForLead) {
-            await updateTaskStatus(task.id, 'Done');
+            await updateTaskStatus(task.id, 'Done', 'user-2');
         }
         
         toast({
