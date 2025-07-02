@@ -130,12 +130,12 @@ const formSchema = z.discriminatedUnion("actionType", [
     }),
 ]).and(baseSchema)
 .refine(data => {
-    if (data.triggerType === 'LEAD_STATUS_CHANGED') {
+    if (data.triggerType === 'LEAD_STATUS_CHANGED' || data.triggerType === 'TASK_CREATED') {
         return !!data.triggerValue;
     }
     return true;
 }, {
-    message: "Please select a trigger status.",
+    message: "Please select a specific trigger value.",
     path: ["triggerValue"],
 });
 
@@ -198,7 +198,7 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
             conditions: values.conditions.map(c => ({...c, id: `cond-${Date.now()}`})),
             action: action
         }
-        if (values.triggerType === 'LEAD_STATUS_CHANGED') {
+        if (values.triggerType === 'LEAD_STATUS_CHANGED' || values.triggerType === 'TASK_CREATED') {
             workflowData.trigger.value = values.triggerValue;
         }
 
@@ -268,7 +268,7 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>When...</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={(value) => { field.onChange(value); form.setValue('triggerValue', ''); }} defaultValue={field.value}>
                             <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a trigger event" />
@@ -276,7 +276,9 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                             </FormControl>
                             <SelectContent>
                                 <SelectItem value="LEAD_CREATED">A new lead is created</SelectItem>
-                                <SelectItem value="LEAD_STATUS_CHANGED">Lead status changes</SelectItem>
+                                <SelectItem value="LEAD_STATUS_CHANGED">Lead status changes to...</SelectItem>
+                                <SelectItem value="TASK_CREATED">A task is created...</SelectItem>
+                                <SelectItem value="LEAD_ASSIGNED">A lead is assigned</SelectItem>
                             </SelectContent>
                         </Select>
                         <FormMessage />
@@ -298,6 +300,30 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                                     </FormControl>
                                     <SelectContent>
                                     {pipelineStages.map(stage => <SelectItem key={stage.id} value={stage.name}>{stage.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
+                 {triggerType === 'TASK_CREATED' && (
+                    <FormField
+                        control={form.control}
+                        name="triggerValue"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Task Type</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a task type" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="ANY">Any Task</SelectItem>
+                                        <SelectItem value="Follow-up">Follow-up (Call or Message)</SelectItem>
+                                        <SelectItem value="Appointment">Appointment</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />

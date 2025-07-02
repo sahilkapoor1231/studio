@@ -96,7 +96,7 @@ export type NewLeadPayload = {
 };
 
 // WORKFLOW TYPES
-export type WorkflowTriggerType = 'LEAD_STATUS_CHANGED' | 'LEAD_CREATED';
+export type WorkflowTriggerType = 'LEAD_STATUS_CHANGED' | 'LEAD_CREATED' | 'LEAD_ASSIGNED' | 'TASK_CREATED';
 
 export type CreateTaskAction = {
     type: 'CREATE_TASK';
