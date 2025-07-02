@@ -56,19 +56,19 @@ const integrationsData: Integration[] = [
     {
         id: "email",
         name: "Email Forwarding",
-        description: "Set up a secret forwarding address to create leads from emails.",
+        description: "Generate a unique email address. Any email sent to this address will automatically create a new lead in your CRM.",
         logo: <Mail className="w-10 h-10 text-primary" />,
     },
     {
         id: "meta",
         name: "Meta Ads (Facebook & Instagram)",
-        description: "Connect your account to capture leads from your Meta lead forms.",
+        description: "Connect your account to capture leads from your Meta lead forms. This uses a secure OAuth flow to link your accounts.",
         logo: <MetaLogo />,
     },
     {
         id: 'google-ads',
         name: 'Google Ads',
-        description: 'Forward leads from Google Ads to a unique email address.',
+        description: 'Connect Google Ads by generating a unique email. Use this email as the endpoint in your Google Ads Lead Form extensions to automatically capture leads.',
         logo: <GoogleAdsLogo />,
     },
 ];
