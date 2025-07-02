@@ -153,7 +153,7 @@ export function BulkScheduleAppointmentDialog({
                     control={form.control}
                     name="appointmentTime"
                     render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                         <FormLabel>Time</FormLabel>
                         <FormControl>
                             <Input type="time" {...field} />

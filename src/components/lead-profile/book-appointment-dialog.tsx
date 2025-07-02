@@ -166,7 +166,7 @@ export function BookAppointmentDialog({ children, lead, isRescheduling }: { chil
                     control={form.control}
                     name="appointmentTime"
                     render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                         <FormLabel>Time</FormLabel>
                         <FormControl>
                             <Input type="time" {...field} />

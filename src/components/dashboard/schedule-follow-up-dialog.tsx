@@ -186,7 +186,7 @@ export function ScheduleFollowUpDialog({ children, lead }: { children: React.Rea
                     control={form.control}
                     name="dueTime"
                     render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                             <FormLabel>Due Time</FormLabel>
                             <FormControl>
                                 <Input type="time" {...field} />
