@@ -383,7 +383,7 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                                     Task Title
                                     <PlaceholderHelpDialog />
                                 </FormLabel>
-                                <FormControl><Input placeholder="e.g. Follow up with {{lead.name}}" {...field} /></FormControl>
+                                <FormControl><Input placeholder="e.g. Follow up with {{lead.name}}" {...field} value={field.value ?? ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -401,7 +401,7 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                                         Recipient
                                         <PlaceholderHelpDialog />
                                     </FormLabel>
-                                    <FormControl><Input placeholder={actionType === 'SEND_EMAIL' ? "e.g., {{lead.email}}" : "e.g., {{lead.phone}}"} {...field} /></FormControl>
+                                    <FormControl><Input placeholder={actionType === 'SEND_EMAIL' ? "e.g., {{lead.email}}" : "e.g., {{lead.phone}}"} {...field} value={field.value ?? ''} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -416,7 +416,7 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                                         <PlaceholderHelpDialog />
                                     </FormLabel>
                                     <FormControl>
-                                        <Textarea placeholder="e.g., Hi {{lead.name}}, confirming your appointment." {...field} />
+                                        <Textarea placeholder="e.g., Hi {{lead.name}}, confirming your appointment." {...field} value={field.value ?? ''}/>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -434,7 +434,7 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                                 <FormItem>
                                     <FormLabel>Send reminder before</FormLabel>
                                     <div className="flex items-center gap-2">
-                                        <FormControl><Input className="w-24" type="number" min="0" placeholder="e.g., 30" {...field} /></FormControl>
+                                        <FormControl><Input className="w-24" type="number" min="0" placeholder="e.g., 30" {...field} value={field.value ?? ''} /></FormControl>
                                         <span>minutes</span>
                                     </div>
                                     <FormMessage />
@@ -451,7 +451,7 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                                         <PlaceholderHelpDialog />
                                     </FormLabel>
                                     <FormControl>
-                                        <Textarea placeholder="e.g., Reminder: {{task.title}} for {{lead.name}} is due soon." {...field} />
+                                        <Textarea placeholder="e.g., Reminder: {{task.title}} for {{lead.name}} is due soon." {...field} value={field.value ?? ''}/>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -474,6 +474,7 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                                   <Textarea 
                                       placeholder="e.g., AI analysis initiated for {{lead.name}}."
                                       {...field}
+                                      value={field.value ?? ''}
                                   />
                                 </FormControl>
                                 <FormMessage />
@@ -533,7 +534,7 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Tag to Add</FormLabel>
-                                <FormControl><Input placeholder="e.g., High Priority" {...field} /></FormControl>
+                                <FormControl><Input placeholder="e.g., High Priority" {...field} value={field.value ?? ''} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
