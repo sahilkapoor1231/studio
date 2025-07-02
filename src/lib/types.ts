@@ -179,7 +179,7 @@ export type RoundRobinRule = {
 // INTEGRATION TYPES
 export type IntegrationSetting = {
     userId: string;
-    service: 'zapier' | 'email' | 'google-ads' | 'whatsapp' | 'meta' | 'google-analytics' | 'linkedin' | 'calendly' | 'hubspot' | 'smtp' | 'bi-tools';
+    service: 'zapier' | 'email' | 'google-ads' | 'whatsapp' | 'meta' | 'google-analytics' | 'linkedin' | 'calendly' | 'hubspot' | 'smtp' | 'bi-tools' | 'google-calendar' | 'zoho-crm';
     value: string; // The webhook URL, email address, API key, or primary value (like SMTP host)
     token?: string; // The secret part of the webhook URL or API key
     details?: Record<string, string>; // For multi-part settings like SMTP

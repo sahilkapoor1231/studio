@@ -680,7 +680,7 @@ export const createIntegrationSetting = async (userId: string, service: Integrat
     } else if (service === 'email' || service === 'google-ads') {
         const uniquePart = randomBytes(4).toString('hex');
         newSetting = { userId, service, value: `${service}-${uniquePart}@leadflow.app` };
-    } else if (service === 'google-analytics' || service === 'hubspot' || service === 'whatsapp') {
+    } else if (service === 'google-analytics' || service === 'hubspot' || service === 'whatsapp' || service === 'zoho-crm') {
         if (!userValue) throw new Error('A value is required for this integration.');
         newSetting = { userId, service, value: userValue };
     } else if (service === 'smtp') {
