@@ -55,11 +55,12 @@ export function BookAppointmentDialog({ children, lead }: { children: React.Reac
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
     try {
-        const taskData: Omit<Task, 'id' | 'status'> = {
+        const taskData: Omit<Task, 'id' | 'status' | 'completedAt' | 'completedBy'> = {
             lead: { id: lead.id, name: lead.name, photoUrl: lead.photoUrl },
             title: `Appointment for ${lead.name}`,
             dueDate: formatISO(values.appointmentDate),
             type: 'Appointment',
+            assignedTo: lead.assignedTo
         }
 
         await addTask(taskData);

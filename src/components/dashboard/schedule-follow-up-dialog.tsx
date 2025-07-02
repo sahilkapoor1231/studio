@@ -60,11 +60,12 @@ export function ScheduleFollowUpDialog({ children, lead }: { children: React.Rea
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
     try {
-        const taskData: Omit<Task, 'id' | 'status'> = {
+        const taskData: Omit<Task, 'id' | 'status' | 'completedAt' | 'completedBy'> = {
             lead: { id: lead.id, name: lead.name, photoUrl: lead.photoUrl },
             title: values.title,
             dueDate: formatISO(values.dueDate),
             type: values.type,
+            assignedTo: lead.assignedTo
         }
 
         await addTask(taskData);
