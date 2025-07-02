@@ -1,7 +1,8 @@
 'use server'
 
-import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType, WorkflowAction, AddNoteAction, AddTagAction, CreateTaskAction, UpdateLeadFieldAction, WorkflowCondition, UserRole, RoundRobinRule, LeadSource, RoundRobinAssignment } from './types';
+import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType, WorkflowAction, AddNoteAction, AddTagAction, CreateTaskAction, UpdateLeadFieldAction, WorkflowCondition, UserRole, RoundRobinRule, LeadSource, RoundRobinAssignment, IntegrationSetting } from './types';
 import { subDays, formatISO, addDays } from 'date-fns';
+import { randomBytes } from 'crypto';
 
 // This avoids issues with hot-reloading wiping out our data in development
 declare global {
@@ -12,6 +13,7 @@ declare global {
   var pipelineStagesDb: PipelineStage[] | undefined;
   var workflowsDb: WorkflowRule[] | undefined;
   var roundRobinRulesDb: RoundRobinRule[] | undefined;
+  var integrationSettingsDb: IntegrationSetting[] | undefined;
 }
 
 // --- INITIAL DATA ---
@@ -79,6 +81,8 @@ const initialRoundRobinRules: RoundRobinRule[] = [
     }
 ];
 
+const initialIntegrationSettings: IntegrationSetting[] = [];
+
 // --- DATABASE INITIALIZATION ---
 // Initialize in-memory DB only if it doesn't exist
 if (typeof global.usersDb === 'undefined') {
@@ -102,6 +106,10 @@ if (typeof global.workflowsDb === 'undefined') {
 if (typeof global.roundRobinRulesDb === 'undefined') {
     global.roundRobinRulesDb = [...initialRoundRobinRules];
 }
+if (typeof global.integrationSettingsDb === 'undefined') {
+    global.integrationSettingsDb = [...initialIntegrationSettings];
+}
+
 
 let users = global.usersDb;
 let leads = global.leadsDb;
@@ -110,6 +118,7 @@ let customFieldDefinitions = global.customFieldsDb;
 let pipelineStages = global.pipelineStagesDb;
 let workflows = global.workflowsDb;
 let roundRobinRules = global.roundRobinRulesDb;
+let integrationSettings = global.integrationSettingsDb;
 
 // --- MOCK DELAY ---
 const mockDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -638,6 +647,53 @@ export const deleteRoundRobinRule = async (ruleId: string): Promise<{ success: b
     if (index > -1) {
         roundRobinRules.splice(index, 1);
         await mockDelay(100);
+        return { success: true };
+    }
+    return { success: false };
+}
+
+// --- INTEGRATION SETTINGS ---
+export const getIntegrationSettings = async (userId: string): Promise<IntegrationSetting[]> => {
+    await mockDelay(200);
+    return integrationSettings.filter(s => s.userId === userId);
+}
+
+export const findUserByIntegrationToken = async (token: string, service: 'zapier'): Promise<User | undefined> => {
+    await mockDelay(50);
+    const setting = integrationSettings.find(s => s.service === service && s.token === token);
+    if (!setting) return undefined;
+    return users.find(u => u.id === setting.userId);
+}
+
+export const createIntegrationSetting = async (userId: string, service: IntegrationSetting['service']): Promise<IntegrationSetting | null> => {
+    await mockDelay(300);
+    if (integrationSettings.some(s => s.userId === userId && s.service === service)) {
+        throw new Error(`Setting for ${service} already exists for this user.`);
+    }
+
+    let newSetting: IntegrationSetting;
+
+    if (service === 'zapier') {
+        const token = randomBytes(16).toString('hex');
+        // In a real app, you'd get the base URL from environment variables
+        const webhookUrl = `https://your-app-domain.com/api/webhooks/zapier/${token}`;
+        newSetting = { userId, service, value: webhookUrl, token };
+    } else if (service === 'email' || service === 'google-ads') {
+        const uniquePart = randomBytes(4).toString('hex');
+        newSetting = { userId, service, value: `${service}-${uniquePart}@leadflow.app` };
+    } else {
+        return null;
+    }
+    
+    integrationSettings.push(newSetting);
+    return newSetting;
+}
+
+export const deleteIntegrationSetting = async (userId: string, service: IntegrationSetting['service']): Promise<{success: boolean}> => {
+    await mockDelay(300);
+    const index = integrationSettings.findIndex(s => s.userId === userId && s.service === service);
+    if (index > -1) {
+        integrationSettings.splice(index, 1);
         return { success: true };
     }
     return { success: false };

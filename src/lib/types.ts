@@ -13,7 +13,7 @@ export type PipelineStage = {
     name: string;
 }
 
-export type LeadSource = 'Website Form' | 'Facebook Ad' | 'Walk-in' | 'IVR' | 'WhatsApp';
+export type LeadSource = 'Website Form' | 'Facebook Ad' | 'Walk-in' | 'IVR' | 'WhatsApp' | 'Zapier';
 export type LeadStage = 'Initial Inquiry' | 'Consultation Done' | 'Procedure Booked' | 'Follow-up Required';
 
 export type HistoryItem = {
@@ -175,3 +175,11 @@ export type RoundRobinRule = {
     // Index of the last user ID in the expanded assignment queue.
     lastAssignedIndex: number;
 };
+
+// INTEGRATION TYPES
+export type IntegrationSetting = {
+    userId: string;
+    service: 'zapier' | 'email' | 'google-ads';
+    value: string; // The webhook URL or email address
+    token?: string; // The secret part of the webhook URL
+}
