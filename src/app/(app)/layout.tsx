@@ -34,84 +34,85 @@ const checkConditions = (lead: Lead, conditions: WorkflowRule['conditions']): bo
 function NotificationScheduler() {
     const { workflows, tasks, allLeads } = useAppContext();
     const { toast } = useToast();
-    const notificationTimeouts = useRef<NodeJS.Timeout[]>([]);
+    const scheduledTimeouts = useRef<NodeJS.Timeout[]>([]);
 
-    // --- Task Due Today Notifications ---
     useEffect(() => {
+        // Always clear previous timeouts when dependencies change to prevent duplicates
+        scheduledTimeouts.current.forEach(clearTimeout);
+        scheduledTimeouts.current = [];
+
         if (!tasks) return;
-        const tasksDueToday = tasks.filter(task => isToday(parseISO(task.dueDate)) && task.status === 'Pending');
+
+        // --- Schedule "Due Today" notifications ---
+        const tasksDueToday = tasks.filter(task => 
+            task.status === 'Pending' && isToday(parseISO(task.dueDate))
+        );
+        
         tasksDueToday.forEach((task, index) => {
-            setTimeout(() => {
-            toast({
-                title: 'Task Due Today',
-                description: `Your task "${task.title}" for ${task.lead.name} is due today.`
-            })
-            }, 1000 + index * 500); // Stagger toasts and add initial delay
+            const timeoutId = setTimeout(() => {
+                toast({
+                    title: 'Task Due Today',
+                    description: `Your task "${task.title}" for ${task.lead.name} is due today.`
+                });
+            }, 1000 + index * 500); // Stagger to avoid toast overload
+            scheduledTimeouts.current.push(timeoutId);
         });
-    }, [tasks, toast]);
 
+        // --- Schedule "Reminder" notifications based on workflows ---
+        if (!workflows || !allLeads) return;
 
-   // --- Scheduled Task Reminder Notifications ---
-    useEffect(() => {
-        // Clear existing timeouts to prevent duplicates on re-render
-        notificationTimeouts.current.forEach(clearTimeout);
-        notificationTimeouts.current = [];
-
-        if (!workflows || !tasks || !allLeads) return;
-
-        const notificationWorkflows = workflows.filter(
+        const reminderWorkflows = workflows.filter(
             (w): w is WorkflowRule & { action: SendNotificationAction } => 
                 w.status === 'active' && 
                 w.trigger.type === 'TASK_CREATED' && 
                 w.action.type === 'SEND_NOTIFICATION'
         );
 
-        if (notificationWorkflows.length === 0) return;
-        
+        if (reminderWorkflows.length === 0) return;
+
         tasks.forEach(task => {
             if (task.status !== 'Pending') return;
-
+            
             const lead = allLeads.find(l => l.id === task.lead.id);
             if (!lead) return;
 
-            notificationWorkflows.forEach(workflow => {
+            reminderWorkflows.forEach(workflow => {
                 const taskCategory = (task.type === 'Call' || task.type === 'Message') ? 'Follow-up' : 'Appointment';
-                const triggerValue = workflow.trigger.value;
-                
-                if (triggerValue === 'ANY' || triggerValue === taskCategory) {
-                    if (checkConditions(lead, workflow.conditions)) {
-                        const action = workflow.action;
-                        const dueDate = parseISO(task.dueDate);
-                        
-                        if (dueDate < new Date()) return;
-                        
-                        const notificationTime = new Date(dueDate.getTime() - action.minutesBefore * 60000);
-                        const delay = notificationTime.getTime() - Date.now();
-                        
-                        if (delay > 0) {
-                            const timeoutId = setTimeout(() => {
-                                const message = action.template
-                                    .replace(/{{task.title}}/g, task.title)
-                                    .replace(/{{lead.name}}/g, lead.name);
-                                toast({
-                                    title: 'Task Reminder',
-                                    description: message,
-                                });
-                            }, delay);
-                            notificationTimeouts.current.push(timeoutId);
-                        }
+                const triggerMatches = workflow.trigger.value === 'ANY' || workflow.trigger.value === taskCategory;
+
+                if (triggerMatches && checkConditions(lead, workflow.conditions)) {
+                    const action = workflow.action;
+                    const dueDate = parseISO(task.dueDate);
+                    
+                    if (dueDate < new Date()) return; // Don't schedule for past tasks
+                    
+                    const notificationTime = new Date(dueDate.getTime() - action.minutesBefore * 60000);
+                    const delay = notificationTime.getTime() - Date.now();
+
+                    if (delay > 0) {
+                        const timeoutId = setTimeout(() => {
+                            const message = action.template
+                                .replace(/{{task.title}}/g, task.title)
+                                .replace(/{{lead.name}}/g, lead.name)
+                                .replace(/{{lead.assignedTo.name}}/g, lead.assignedTo.name);
+                            
+                            toast({
+                                title: 'Task Reminder',
+                                description: message,
+                            });
+                        }, delay);
+                        scheduledTimeouts.current.push(timeoutId);
                     }
                 }
             });
         });
-        
-        return () => {
-            notificationTimeouts.current.forEach(clearTimeout);
-        };
 
+        // Cleanup function to clear all timeouts when the component unmounts or effect re-runs
+        return () => {
+            scheduledTimeouts.current.forEach(clearTimeout);
+        };
     }, [workflows, tasks, allLeads, toast]);
 
-    // This component does not render anything visual
     return null;
 }
 
