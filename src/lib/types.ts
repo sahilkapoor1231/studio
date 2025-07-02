@@ -13,7 +13,7 @@ export type PipelineStage = {
     name: string;
 }
 
-export type LeadSource = 'Website Form' | 'Facebook Ad' | 'Walk-in' | 'IVR' | 'WhatsApp' | 'Zapier';
+export type LeadSource = 'Website Form' | 'Facebook Ad' | 'Walk-in' | 'IVR' | 'WhatsApp' | 'Zapier' | 'LinkedIn' | 'Calendly';
 export type LeadStage = 'Initial Inquiry' | 'Consultation Done' | 'Procedure Booked' | 'Follow-up Required';
 
 export type HistoryItem = {
@@ -179,7 +179,8 @@ export type RoundRobinRule = {
 // INTEGRATION TYPES
 export type IntegrationSetting = {
     userId: string;
-    service: 'zapier' | 'email' | 'google-ads' | 'whatsapp';
-    value: string; // The webhook URL, email address, or API key
-    token?: string; // The secret part of the webhook URL
+    service: 'zapier' | 'email' | 'google-ads' | 'whatsapp' | 'meta' | 'google-analytics' | 'linkedin' | 'calendly' | 'hubspot' | 'smtp' | 'bi-tools';
+    value: string; // The webhook URL, email address, API key, or primary value (like SMTP host)
+    token?: string; // The secret part of the webhook URL or API key
+    details?: Record<string, string>; // For multi-part settings like SMTP
 }

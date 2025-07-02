@@ -6,11 +6,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, ClipboardCopy, Loader2, Mail, ExternalLink, XCircle } from "lucide-react";
+import { CheckCircle, ClipboardCopy, Loader2, Mail, ExternalLink, XCircle, BarChart, Calendar, Briefcase, Link as LinkIcon, Send } from "lucide-react";
 import Link from "next/link";
 import { getIntegrationSettings, createIntegrationSetting, deleteIntegrationSetting } from "@/lib/data";
+import type { IntegrationSetting } from "@/lib/types";
 
-// Simple SVG logos for demonstration
+// --- LOGO COMPONENTS ---
 const ZapierLogo = () => (
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M3.375 9.75H8.625V14.25H3.375V9.75Z" fill="#FF4A00"/>
@@ -41,8 +42,36 @@ const GoogleAdsLogo = () => (
     </svg>
 )
 
+const GoogleAnalyticsLogo = () => (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="12" width="5" height="8" rx="1" fill="#F4A800"/>
+        <rect x="10" y="8" width="5" height="12" rx="1" fill="#E8710A"/>
+        <rect x="16" y="4" width="5" height="16" rx="1" fill="#E8710A"/>
+    </svg>
+)
 
-type IntegrationId = 'zapier' | 'email' | 'meta' | 'google-ads' | 'whatsapp';
+const LinkedInLogo = () => (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+       <rect width="24" height="24" rx="4" fill="#0A66C2"/>
+       <path d="M9.4375 17.5H7V8H9.4375V17.5ZM8.1875 7.03125C7.46875 7.03125 6.875 6.4375 6.875 5.75C6.875 5.0625 7.46875 4.5 8.1875 4.5C8.90625 4.5 9.5 5.0625 9.5 5.75C9.5 6.4375 8.90625 7.03125 8.1875 7.03125ZM17.5 17.5H15.0625V12.9688C15.0625 11.7812 14.6562 11.0312 13.6875 11.0312C12.875 11.0312 12.3125 11.5938 12.0938 12.125C12.0625 12.3125 12.0312 12.5625 12.0312 12.8125V17.5H9.59375V8H12.0312V9.09375C12.375 8.53125 13.2188 7.8125 14.7188 7.8125C16.3125 7.8125 17.5 8.875 17.5 11.4375V17.5Z" fill="white"/>
+   </svg>
+)
+
+const CalendlyLogo = () => (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="10" fill="#006BFF"/>
+        <path d="M12 6.5C8.96 6.5 6.5 8.96 6.5 12C6.5 15.04 8.96 17.5 12 17.5C15.04 17.5 17.5 15.04 17.5 12H12V6.5Z" fill="white"/>
+    </svg>
+)
+
+const HubSpotLogo = () => (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM15.22 16.94L12 15.15L8.78 16.94L9.88 13.34L7.13 11.16L10.5 10.95L12 7.75L13.5 10.95L16.88 11.16L14.13 13.34L15.22 16.94Z" fill="#FF7A59"/>
+    </svg>
+)
+
+// --- TYPE DEFINITIONS ---
+type IntegrationId = 'zapier' | 'email' | 'meta' | 'google-ads' | 'whatsapp' | 'google-analytics' | 'linkedin' | 'calendly' | 'hubspot' | 'smtp' | 'bi-tools';
 type Integration = {
     id: IntegrationId;
     name: string;
@@ -50,6 +79,7 @@ type Integration = {
     logo: JSX.Element;
 };
 
+// --- INTEGRATION DATA ---
 const integrationsData: Integration[] = [
     {
         id: "zapier",
@@ -58,43 +88,74 @@ const integrationsData: Integration[] = [
         logo: <ZapierLogo />,
     },
     {
-        id: "whatsapp",
-        name: "WhatsApp Business API",
-        description: "Connect your WhatsApp Business account using an API key to enable automated messaging workflows.",
-        logo: <WhatsAppLogo />,
-    },
-    {
-        id: "email",
-        name: "Email Forwarding",
-        description: "Generate a unique email address. Any email sent to this address will automatically create a new lead in your CRM.",
+        id: 'email',
+        name: 'Lead Capture Email',
+        description: "Generate a unique email. Any email sent here will create a new lead.",
         logo: <Mail className="w-10 h-10 text-primary" />,
     },
     {
-        id: "meta",
-        name: "Meta Ads (Facebook & Instagram)",
-        description: "Connect your account to capture leads from your Meta lead forms. This uses a secure OAuth flow to link your accounts.",
-        logo: <MetaLogo />,
+        id: "whatsapp",
+        name: "WhatsApp Business API",
+        description: "Connect your WhatsApp Business account to enable messaging workflows.",
+        logo: <WhatsAppLogo />,
     },
     {
         id: 'google-ads',
         name: 'Google Ads',
-        description: 'Connect Google Ads by generating a unique email. Use this email as the endpoint in your Google Ads Lead Form extensions to automatically capture leads.',
+        description: 'Generate a unique email to use as the endpoint in your Google Ads Lead Form extensions.',
         logo: <GoogleAdsLogo />,
+    },
+     {
+        id: "meta",
+        name: "Meta Ads (Facebook & Instagram)",
+        description: "Securely connect your account via OAuth to capture leads from your Meta lead forms.",
+        logo: <MetaLogo />,
+    },
+    {
+        id: 'google-analytics',
+        name: 'Google Analytics (GA4)',
+        description: 'Add your GA4 Measurement ID to track lead sources and conversions.',
+        logo: <GoogleAnalyticsLogo />,
+    },
+    {
+        id: 'linkedin',
+        name: 'LinkedIn Lead Gen Forms',
+        description: 'Connect your LinkedIn account via OAuth to capture leads from your B2B ad campaigns.',
+        logo: <LinkedInLogo />,
+    },
+    {
+        id: 'calendly',
+        name: 'Calendly',
+        description: 'Generate a webhook URL to automatically log meetings booked via Calendly.',
+        logo: <CalendlyLogo />,
+    },
+    {
+        id: 'hubspot',
+        name: 'HubSpot CRM Sync',
+        description: 'Enter your HubSpot API key to enable a two-way sync for leads and contacts.',
+        logo: <HubSpotLogo />,
+    },
+    {
+        id: 'bi-tools',
+        name: 'BI Tool Connector',
+        description: 'Generate an API key to pull CRM data into Looker, Tableau, or Power BI.',
+        logo: <BarChart className="w-10 h-10 text-primary" />,
+    },
+    {
+        id: 'smtp',
+        name: 'SMTP / Email Sending',
+        description: 'Configure your own SMTP server to send emails directly from the CRM.',
+        logo: <Send className="w-10 h-10 text-primary" />,
     },
 ];
 
-type IntegrationSetting = {
-    userId: string,
-    service: IntegrationId,
-    value: string;
-    token?: string;
-}
-
+// --- MAIN COMPONENT ---
 export default function IntegrationsPage() {
     const { toast } = useToast();
     const [settings, setSettings] = useState<IntegrationSetting[]>([]);
     const [isLoading, setIsLoading] = useState<Partial<Record<IntegrationId, boolean>>>({});
     const [inputValues, setInputValues] = useState<Partial<Record<IntegrationId, string>>>({});
+    const [smtpDetails, setSmtpDetails] = useState({ host: '', port: '', user: '', pass: '' });
 
     useEffect(() => {
         const loadSettings = async () => {
@@ -105,10 +166,10 @@ export default function IntegrationsPage() {
         loadSettings();
     }, []);
 
-    const copyToClipboard = (text: string) => {
+    const copyToClipboard = (text: string, entity: string) => {
         navigator.clipboard.writeText(text);
         toast({
-            title: "Copied to clipboard!",
+            title: `${entity} copied to clipboard!`,
         });
     }
 
@@ -121,16 +182,28 @@ export default function IntegrationsPage() {
             if (existingSetting) { // Disconnect
                 await deleteIntegrationSetting('user-2', id);
                 setSettings(prev => prev.filter(s => s.service !== id));
-                toast({ title: `Integration disconnected.`});
+                if (id === 'smtp') setSmtpDetails({ host: '', port: '', user: '', pass: '' });
+                toast({ title: `${integrationsData.find(i => i.id === id)?.name} integration disconnected.`});
             } else { // Connect
                 const userValue = inputValues[id];
-                if (id === 'whatsapp' && !userValue) {
-                    toast({ title: "API Key Required", description: "Please enter your WhatsApp API key.", variant: "destructive" });
-                    setIsLoading(prev => ({ ...prev, [id]: false }));
-                    return;
+                let details;
+                
+                if (['whatsapp', 'hubspot', 'google-analytics'].includes(id) && !userValue) {
+                     toast({ title: "Value Required", description: "Please enter the required information.", variant: "destructive" });
+                     setIsLoading(prev => ({ ...prev, [id]: false }));
+                     return;
+                }
+                
+                if (id === 'smtp') {
+                    if (!smtpDetails.host || !smtpDetails.port || !smtpDetails.user || !smtpDetails.pass) {
+                        toast({ title: "All SMTP fields are required", variant: "destructive" });
+                        setIsLoading(prev => ({ ...prev, [id]: false }));
+                        return;
+                    }
+                    details = smtpDetails;
                 }
 
-                const newSetting = await createIntegrationSetting('user-2', id, userValue);
+                const newSetting = await createIntegrationSetting('user-2', id, userValue, details);
                 if (newSetting) {
                     setSettings(prev => [...prev, newSetting]);
                     toast({ title: "Integration Connected!" });
@@ -153,45 +226,85 @@ export default function IntegrationsPage() {
         const setting = settings.find(s => s.service === integration.id);
         const loading = isLoading[integration.id];
 
-        if (integration.id === 'meta') {
-            return (
-                <>
-                    <CardContent className="flex-grow">
-                        <p className="text-sm text-muted-foreground">
-                            Click below to securely connect your Meta account. You will be redirected to Facebook to authorize the connection.
-                        </p>
-                    </CardContent>
-                    <CardFooter>
-                        <Button asChild>
-                            <Link href="#" onClick={(e) => {e.preventDefault(); toast({title: "Redirecting to Meta...", description: "This is a simulated OAuth flow."})}}>
-                                <ExternalLink className="mr-2" /> Connect with Meta
-                            </Link>
-                        </Button>
-                    </CardFooter>
-                </>
-            );
-        }
-
-        const isGenerated = ['zapier', 'email', 'google-ads'].includes(integration.id);
-        
+        // --- UI for connected state ---
         if (setting) {
-            const displayValue = integration.id === 'whatsapp' 
-                ? `**********${setting.value.slice(-4)}` 
-                : setting.value;
+             let displayValue = '';
+             const isSensitive = ['whatsapp', 'hubspot', 'smtp'].includes(integration.id);
+             if (isSensitive) {
+                displayValue = `**********${setting.value.slice(-4)}`;
+             } else {
+                displayValue = setting.value;
+             }
+
+             if (integration.id === 'smtp' && setting.details) {
+                 return (
+                     <>
+                        <CardContent className="flex-grow space-y-4">
+                             <p className="text-sm text-green-600 flex items-center gap-2">
+                                <CheckCircle className="h-4 w-4" />
+                                <span>Active and connected.</span>
+                            </p>
+                             <p className="text-xs text-muted-foreground">
+                                Host: {setting.details.host}<br/>
+                                Port: {setting.details.port}<br/>
+                                User: {setting.details.user}
+                             </p>
+                        </CardContent>
+                        <CardFooter>
+                           <Button onClick={() => handleConnectToggle(integration.id)} variant="destructive" className="w-32" disabled={loading}>
+                                {loading ? <Loader2 className="animate-spin" /> : <><XCircle className="mr-2"/> Disconnect</>}
+                            </Button>
+                        </CardFooter>
+                     </>
+                 );
+             }
+
+             if (integration.id === 'bi-tools' && setting.token) {
+                 return (
+                     <>
+                        <CardContent className="flex-grow space-y-4">
+                            <div>
+                                <Label htmlFor={`url-${integration.id}`}>Data Source URL</Label>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <Input id={`url-${integration.id}`} readOnly value={setting.value} className="bg-muted" />
+                                    <Button variant="outline" size="icon" onClick={() => copyToClipboard(setting.value, 'URL')}>
+                                        <ClipboardCopy className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                            <div>
+                                <Label htmlFor={`key-${integration.id}`}>API Key</Label>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <Input id={`key-${integration.id}`} readOnly value={`**********${setting.token.slice(-4)}`} className="bg-muted" />
+                                    <Button variant="outline" size="icon" onClick={() => copyToClipboard(setting.token!, 'API Key')}>
+                                        <ClipboardCopy className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                        <CardFooter>
+                            <Button onClick={() => handleConnectToggle(integration.id)} variant="destructive" className="w-32" disabled={loading}>
+                                {loading ? <Loader2 className="animate-spin" /> : <><XCircle className="mr-2"/> Disconnect</>}
+                            </Button>
+                        </CardFooter>
+                     </>
+                 )
+             }
 
             return (
                  <>
                     <CardContent className="flex-grow">
                         <Label htmlFor={`url-${integration.id}`}>
-                            {isGenerated ? 'Your unique address' : 'Your API Key'}
+                            {['zapier', 'calendly'].includes(integration.id) ? 'Your Webhook URL' : 
+                             ['email', 'google-ads'].includes(integration.id) ? 'Your Unique Email' :
+                             integration.id === 'google-analytics' ? 'Your Measurement ID' :
+                             'Your API Key'}
                         </Label>
                         <div className="flex items-center gap-2 mt-1">
                             <Input id={`url-${integration.id}`} readOnly value={displayValue} className="bg-muted" />
-                             {isGenerated && (
-                                <Button variant="outline" size="icon" onClick={() => copyToClipboard(setting.value)}>
-                                    <ClipboardCopy className="h-4 w-4" />
-                                </Button>
-                             )}
+                            <Button variant="outline" size="icon" onClick={() => copyToClipboard(setting.value, 'Value')}>
+                                <ClipboardCopy className="h-4 w-4" />
+                            </Button>
                         </div>
                         <p className="mt-4 text-sm text-green-600 flex items-center gap-2">
                             <CheckCircle className="h-4 w-4" />
@@ -199,62 +312,89 @@ export default function IntegrationsPage() {
                         </p>
                     </CardContent>
                     <CardFooter>
-                        <Button 
-                            onClick={() => handleConnectToggle(integration.id)}
-                            variant="destructive"
-                            className="w-32"
-                            disabled={loading}
-                        >
-                            {loading ? <Loader2 className="animate-spin" /> : 
-                            <><XCircle className="mr-2"/> Disconnect</>}
+                        <Button onClick={() => handleConnectToggle(integration.id)} variant="destructive" className="w-32" disabled={loading}>
+                            {loading ? <Loader2 className="animate-spin" /> : <><XCircle className="mr-2"/> Disconnect</>}
                         </Button>
                     </CardFooter>
                 </>
             );
         }
-
-        if (isGenerated) {
+        
+        // --- UI for disconnected state ---
+        
+        const isOAuth = ['meta', 'linkedin'].includes(integration.id);
+        if (isOAuth) {
             return (
                 <>
-                    <CardContent className="flex-grow">
-                        <p className="text-sm text-muted-foreground">
-                            Click 'Connect' to generate your unique address.
-                        </p>
-                    </CardContent>
+                    <CardContent className="flex-grow" />
                     <CardFooter>
-                        <Button 
-                            onClick={() => handleConnectToggle(integration.id)}
-                            className="w-32"
-                            disabled={loading}
-                        >
-                            {loading ? <Loader2 className="animate-spin" /> : <><CheckCircle className="mr-2" /> Connect</>}
+                        <Button asChild>
+                            <Link href="#" onClick={(e) => {e.preventDefault(); toast({title: `Redirecting to ${integration.name}...`, description: "This is a simulated OAuth flow."})}}>
+                                <ExternalLink className="mr-2" /> Connect with {integration.name}
+                            </Link>
                         </Button>
                     </CardFooter>
                 </>
             );
         }
 
-        // Handle API Key input for WhatsApp
+        const isGenerated = ['zapier', 'email', 'google-ads', 'calendly', 'bi-tools'].includes(integration.id);
+        if (isGenerated) {
+            return (
+                 <>
+                    <CardContent className="flex-grow" />
+                    <CardFooter>
+                        <Button onClick={() => handleConnectToggle(integration.id)} className="w-32" disabled={loading}>
+                            {loading ? <Loader2 className="animate-spin" /> : <><LinkIcon className="mr-2" /> Connect</>}
+                        </Button>
+                    </CardFooter>
+                </>
+            );
+        }
+
+        if (integration.id === 'smtp') {
+            return (
+                <>
+                    <CardContent className="flex-grow space-y-2">
+                        <Label htmlFor={`smtp-host`}>SMTP Host</Label>
+                        <Input id={`smtp-host`} placeholder="smtp.example.com" value={smtpDetails.host} onChange={(e) => setSmtpDetails(p => ({...p, host: e.target.value}))} />
+                        <Label htmlFor={`smtp-port`}>Port</Label>
+                        <Input id={`smtp-port`} placeholder="587" value={smtpDetails.port} onChange={(e) => setSmtpDetails(p => ({...p, port: e.target.value}))} />
+                        <Label htmlFor={`smtp-user`}>Username</Label>
+                        <Input id={`smtp-user`} placeholder="your@email.com" value={smtpDetails.user} onChange={(e) => setSmtpDetails(p => ({...p, user: e.target.value}))} />
+                        <Label htmlFor={`smtp-pass`}>Password</Label>
+                        <Input id={`smtp-pass`} type="password" value={smtpDetails.pass} onChange={(e) => setSmtpDetails(p => ({...p, pass: e.target.value}))} />
+                    </CardContent>
+                     <CardFooter>
+                         <Button onClick={() => handleConnectToggle(integration.id)} className="w-32" disabled={loading}>
+                            {loading ? <Loader2 className="animate-spin" /> : <><LinkIcon className="mr-2" /> Connect</>}
+                        </Button>
+                    </CardFooter>
+                </>
+            )
+        }
+
+        // Handle API Key inputs (WhatsApp, HubSpot, GA)
+        const placeholder = integration.id === 'google-analytics' ? 'G-XXXXXXXXXX' : 'Enter your API key';
+        const label = integration.id === 'google-analytics' ? 'Measurement ID' : 'Your API Key';
+        const inputType = ['whatsapp', 'hubspot'].includes(integration.id) ? 'password' : 'text';
+
         return (
             <>
                 <CardContent className="flex-grow">
-                    <Label htmlFor={`apikey-${integration.id}`}>Your API Key</Label>
+                    <Label htmlFor={`apikey-${integration.id}`}>{label}</Label>
                     <Input 
                         id={`apikey-${integration.id}`}
-                        type="password"
-                        placeholder="Enter your API key"
+                        type={inputType}
+                        placeholder={placeholder}
                         className="mt-1"
                         value={inputValues[integration.id] || ''}
                         onChange={(e) => setInputValues(prev => ({...prev, [integration.id]: e.target.value}))}
                     />
                 </CardContent>
                 <CardFooter>
-                     <Button 
-                        onClick={() => handleConnectToggle(integration.id)}
-                        className="w-32"
-                        disabled={loading}
-                    >
-                        {loading ? <Loader2 className="animate-spin" /> : <><CheckCircle className="mr-2" /> Connect</>}
+                     <Button onClick={() => handleConnectToggle(integration.id)} className="w-32" disabled={loading}>
+                        {loading ? <Loader2 className="animate-spin" /> : <><LinkIcon className="mr-2" /> Connect</>}
                     </Button>
                 </CardFooter>
             </>

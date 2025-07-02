@@ -658,14 +658,14 @@ export const getIntegrationSettings = async (userId: string): Promise<Integratio
     return integrationSettings.filter(s => s.userId === userId);
 }
 
-export const findUserByIntegrationToken = async (token: string, service: 'zapier'): Promise<User | undefined> => {
+export const findUserByIntegrationToken = async (token: string, service: 'zapier' | 'calendly'): Promise<User | undefined> => {
     await mockDelay(50);
     const setting = integrationSettings.find(s => s.service === service && s.token === token);
     if (!setting) return undefined;
     return users.find(u => u.id === setting.userId);
 }
 
-export const createIntegrationSetting = async (userId: string, service: IntegrationSetting['service'], userValue?: string): Promise<IntegrationSetting | null> => {
+export const createIntegrationSetting = async (userId: string, service: IntegrationSetting['service'], userValue?: string, details?: Record<string, string>): Promise<IntegrationSetting | null> => {
     await mockDelay(300);
     if (integrationSettings.some(s => s.userId === userId && s.service === service)) {
         throw new Error(`Setting for ${service} already exists for this user.`);
@@ -673,21 +673,27 @@ export const createIntegrationSetting = async (userId: string, service: Integrat
 
     let newSetting: IntegrationSetting;
 
-    if (service === 'zapier') {
+    if (service === 'zapier' || service === 'calendly') {
         const token = randomBytes(16).toString('hex');
-        // In a real app, you'd get the base URL from environment variables
-        const webhookUrl = `https://your-app-domain.com/api/webhooks/zapier/${token}`;
+        const webhookUrl = `https://your-app-domain.com/api/webhooks/${service}/${token}`;
         newSetting = { userId, service, value: webhookUrl, token };
     } else if (service === 'email' || service === 'google-ads') {
         const uniquePart = randomBytes(4).toString('hex');
         newSetting = { userId, service, value: `${service}-${uniquePart}@leadflow.app` };
-    } else if (service === 'whatsapp') {
-        if (!userValue) {
-            throw new Error('API Key is required for WhatsApp integration.');
-        }
+    } else if (service === 'google-analytics' || service === 'hubspot' || service === 'whatsapp') {
+        if (!userValue) throw new Error('A value is required for this integration.');
         newSetting = { userId, service, value: userValue };
-    } else {
-        return null;
+    } else if (service === 'smtp') {
+        if (!details) throw new Error('SMTP details are required.');
+        newSetting = { userId, service, value: details.host, details };
+    } else if (service === 'bi-tools') {
+        const apiKey = `bi_key_${randomBytes(16).toString('hex')}`;
+        const dataSourceUrl = `https://api.leadflow.app/data-exports/${userId}`;
+        newSetting = { userId, service, value: dataSourceUrl, token: apiKey };
+    }
+    else {
+        // Fallback for OAuth-like flows that don't store a value directly here
+        newSetting = { userId, service, value: 'connected' };
     }
     
     integrationSettings.push(newSetting);
