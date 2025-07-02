@@ -346,6 +346,23 @@ export const updateLeadAssignment = async (leadId: string, newUserId: string): P
     return lead;
 }
 
+export const bulkUpdateLeadAssignment = async (leadIds: string[], newUserId: string, actorId: string): Promise<{ success: boolean }> => {
+    await mockDelay(500);
+    const user = users.find(u => u.id === newUserId);
+    if (!user) {
+        throw new Error("Assigned user not found.");
+    }
+
+    for (const leadId of leadIds) {
+        const lead = leads.find(l => l.id === leadId);
+        if (lead) {
+            lead.assignedTo = user;
+            await addHistoryItem(leadId, `Lead reassigned to ${user.name} via bulk action.`, actorId);
+        }
+    }
+    return { success: true };
+}
+
 export const deleteLead = async (leadId: string, userId: string): Promise<{ success: boolean }> => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return { success: false };

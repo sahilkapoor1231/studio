@@ -3,11 +3,12 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { CalendarPlus, Loader2, XCircle, X } from "lucide-react"
+import { CalendarPlus, Loader2, XCircle, X, Users } from "lucide-react"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { bulkUpdateLeadStatus } from "@/lib/data"
 import { BulkScheduleAppointmentDialog } from "./bulk-schedule-appointment-dialog"
+import { BulkReassignDialog } from "./bulk-reassign-dialog"
 
 export function BulkActionsToolbar({
   selectedCount,
@@ -50,6 +51,18 @@ export function BulkActionsToolbar({
             <p className="text-sm font-medium">
                 {selectedCount} lead{selectedCount > 1 ? 's' : ''} selected
             </p>
+            <BulkReassignDialog leadIds={selectedLeadIds} onComplete={onClearSelection}>
+                <Button variant="outline" size="sm" disabled={isLoading}>
+                    <Users className="mr-2" />
+                    Reassign
+                </Button>
+            </BulkReassignDialog>
+            <BulkScheduleAppointmentDialog leadIds={selectedLeadIds} onComplete={onClearSelection}>
+                <Button variant="outline" size="sm" disabled={isLoading}>
+                    <CalendarPlus className="mr-2" />
+                    Schedule Appointment
+                </Button>
+            </BulkScheduleAppointmentDialog>
             <AlertDialog>
                 <AlertDialogTrigger asChild>
                     <Button variant="destructive" size="sm" disabled={isLoading}>
@@ -70,12 +83,6 @@ export function BulkActionsToolbar({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-            <BulkScheduleAppointmentDialog leadIds={selectedLeadIds} onComplete={onClearSelection}>
-                <Button variant="outline" size="sm" disabled={isLoading}>
-                    <CalendarPlus className="mr-2" />
-                    Schedule Appointment
-                </Button>
-            </BulkScheduleAppointmentDialog>
         </div>
         <Button variant="ghost" size="icon" onClick={onClearSelection}>
             <X />
