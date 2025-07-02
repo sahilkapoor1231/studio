@@ -74,10 +74,13 @@ export type Lead = {
 export type Task = {
   id: string;
   lead: Pick<Lead, 'id' | 'name' | 'photoUrl'>;
+  assignedTo: User;
   title: string;
   dueDate: string;
   status: 'Pending' | 'Done' | 'Overdue';
   type: 'Call' | 'Message' | 'Appointment';
+  completedAt?: string;
+  completedBy?: User;
 };
 
 export type NewLeadPayload = {

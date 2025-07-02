@@ -3,10 +3,12 @@
 import { Sidebar, SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AppHeader } from "@/components/app-header"
-import { getCustomFields, getPipelineStages, getUsers, getWorkflows, getRoundRobinRules } from "@/lib/data"
+import { getCustomFields, getPipelineStages, getUsers, getWorkflows, getRoundRobinRules, getTasks } from "@/lib/data"
 import { AppContextProvider } from "@/lib/app-context"
 import { useEffect, useState } from "react"
-import type { User, PipelineStage, CustomFieldDefinition, WorkflowRule, RoundRobinRule } from "@/lib/types"
+import type { User, PipelineStage, CustomFieldDefinition, WorkflowRule, RoundRobinRule, Task } from "@/lib/types"
+import { useToast } from "@/hooks/use-toast"
+import { isToday, parseISO } from "date-fns"
 
 type InitialData = {
     allUsers: User[];
@@ -25,22 +27,36 @@ export default function AppLayout({
 }) {
   const [initialData, setInitialData] = useState<InitialData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     async function loadInitialData() {
-      const [customFields, pipelineStages, allUsers, workflows, roundRobinRules] = await Promise.all([
+      const [customFields, pipelineStages, allUsers, workflows, roundRobinRules, tasks] = await Promise.all([
         getCustomFields(),
         getPipelineStages(),
         getUsers(),
         getWorkflows(),
         getRoundRobinRules(),
+        getTasks(),
       ]);
       const assignableUsers = allUsers.filter(u => u.role === 'Counselor' || u.role === 'Receptionist');
       setInitialData({ allUsers, assignableUsers, pipelineStages, customFields, workflows, roundRobinRules });
+
+      // Task Reminders
+      const tasksDueToday = tasks.filter(task => isToday(parseISO(task.dueDate)) && task.status === 'Pending');
+      tasksDueToday.forEach((task, index) => {
+        setTimeout(() => {
+          toast({
+            title: 'Task Reminder',
+            description: `Your task "${task.title}" is due today.`
+          })
+        }, index * 500); // Stagger toasts
+      });
+
       setIsLoading(false);
     }
     loadInitialData();
-  }, []);
+  }, [toast]);
 
   if (isLoading || !initialData) {
     // You can render a loading skeleton for the entire layout here

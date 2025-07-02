@@ -54,11 +54,11 @@ const initialLeads: Lead[] = [
 ];
 
 const initialTasks: Task[] = [
-    { id: 'task-1', lead: initialLeads[3], title: "Follow up with Emily Davis", dueDate: formatISO(new Date()), status: 'Pending', type: 'Call'},
-    { id: 'task-2', lead: initialLeads[0], title: "Send post-consultation info", dueDate: formatISO(new Date()), status: 'Pending', type: 'Message'},
-    { id: 'task-3', lead: initialLeads[2], title: "Appointment with Dr. Reed", dueDate: formatISO(addDays(new Date(), 3)), status: 'Pending', type: 'Appointment'},
-    { id: 'task-4', lead: initialLeads[1], title: "Initial contact call", dueDate: formatISO(subDays(new Date(), 2)), status: 'Overdue', type: 'Call'},
-    { id: 'task-5', lead: initialLeads[0], title: "Discuss financing options", dueDate: formatISO(addDays(new Date(), 1)), status: 'Pending', type: 'Call'},
+    { id: 'task-1', lead: initialLeads[3], assignedTo: initialLeads[3].assignedTo, title: "Follow up with Emily Davis", dueDate: formatISO(new Date()), status: 'Pending', type: 'Call'},
+    { id: 'task-2', lead: initialLeads[0], assignedTo: initialLeads[0].assignedTo, title: "Send post-consultation info", dueDate: formatISO(new Date()), status: 'Pending', type: 'Message'},
+    { id: 'task-3', lead: initialLeads[2], assignedTo: initialLeads[2].assignedTo, title: "Appointment with Dr. Reed", dueDate: formatISO(addDays(new Date(), 3)), status: 'Pending', type: 'Appointment'},
+    { id: 'task-4', lead: initialLeads[1], assignedTo: initialLeads[1].assignedTo, title: "Initial contact call", dueDate: formatISO(subDays(new Date(), 2)), status: 'Overdue', type: 'Call'},
+    { id: 'task-5', lead: initialLeads[0], assignedTo: initialLeads[0].assignedTo, title: "Discuss financing options", dueDate: formatISO(addDays(new Date(), 1)), status: 'Pending', type: 'Call'},
 ];
 
 const initialWorkflows: WorkflowRule[] = [
@@ -148,7 +148,7 @@ const checkConditions = (lead: Lead, conditions: WorkflowCondition[]): boolean =
 }
 
 
-const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promise<boolean> => {
+const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead, userId: string): Promise<boolean> => {
     let triggered = false;
     
     const matchingWorkflows = workflows.filter(w => {
@@ -169,6 +169,7 @@ const runWorkflows = async (triggerType: WorkflowTriggerType, lead: Lead): Promi
             const taskTitle = applyTemplate(rule.action.template, lead);
             await addTask({
                 lead: { id: lead.id, name: lead.name, photoUrl: lead.photoUrl },
+                assignedTo: lead.assignedTo,
                 title: taskTitle,
                 dueDate: formatISO(addDays(new Date(), 1)),
                 type: 'Call', // Default task type for workflows
@@ -290,12 +291,12 @@ export const addLead = async (leadData: NewLeadPayload): Promise<Lead> => {
     await mockDelay(200);
 
     // Run workflows for lead creation
-    runWorkflows('LEAD_CREATED', newLead);
+    runWorkflows('LEAD_CREATED', newLead, 'user-2');
 
     return newLead;
 }
 
-export const updateLeadStatus = async (leadId: string, newStatus: string): Promise<{ success: boolean; workflowTriggered: boolean, updatedLead: Lead | null }> => {
+export const updateLeadStatus = async (leadId: string, newStatus: string, userId: string): Promise<{ success: boolean; workflowTriggered: boolean, updatedLead: Lead | null }> => {
     const leadIndex = leads.findIndex(l => l.id === leadId && !l.deletedAt);
     if (leadIndex === -1) {
         return { success: false, workflowTriggered: false, updatedLead: null };
@@ -303,13 +304,26 @@ export const updateLeadStatus = async (leadId: string, newStatus: string): Promi
     
     leads[leadIndex].status = newStatus;
     const lead = leads[leadIndex];
-    await addHistoryItem(leadId, `Status changed to ${newStatus}`, 'user-2'); // Assume user-2 is the current user
+    await addHistoryItem(leadId, `Status changed to ${newStatus}`, userId);
     
     await mockDelay(200);
-    const workflowTriggered = await runWorkflows('LEAD_STATUS_CHANGED', lead);
+    const workflowTriggered = await runWorkflows('LEAD_STATUS_CHANGED', lead, userId);
     
     return { success: true, workflowTriggered, updatedLead: lead };
 }
+
+export const bulkUpdateLeadStatus = async (leadIds: string[], status: string, userId: string) => {
+    await mockDelay(500);
+    const updatedLeads: Lead[] = [];
+    for (const leadId of leadIds) {
+        const result = await updateLeadStatus(leadId, status, userId);
+        if (result.success && result.updatedLead) {
+            updatedLeads.push(result.updatedLead);
+        }
+    }
+    return { success: true, updatedLeads };
+};
+
 
 export const updateLeadAssignment = async (leadId: string, newUserId: string): Promise<Lead> => {
     const lead = leads.find(l => l.id === leadId && !l.deletedAt);
@@ -395,7 +409,7 @@ export const getTasks = async (): Promise<Task[]> => {
     return [...tasks];
 }
 
-export const addTask = async (taskData: Omit<Task, 'id' | 'status'>): Promise<Task> => {
+export const addTask = async (taskData: Omit<Task, 'id' | 'status' | 'completedAt' | 'completedBy'>): Promise<Task> => {
     const newTask: Task = { id: `task-${Date.now()}`, status: 'Pending', ...taskData };
     tasks.unshift(newTask);
     await mockDelay(100);
@@ -409,10 +423,49 @@ export const addTask = async (taskData: Omit<Task, 'id' | 'status'>): Promise<Ta
     return newTask;
 }
 
-export const updateTaskStatus = async (taskId: string, status: 'Pending' | 'Done' | 'Overdue'): Promise<Task | null> => {
+export const bulkCreateAppointments = async (
+    leadIds: string[],
+    appointmentDetails: { dueDate: string; notes?: string },
+    creatorId: string
+): Promise<{ success: boolean; createdTasks: Task[] }> => {
+    await mockDelay(500);
+    const creator = users.find(u => u.id === creatorId);
+    if (!creator) throw new Error("Creator user not found");
+    
+    const createdTasks: Task[] = [];
+    for (const leadId of leadIds) {
+        const lead = leads.find(l => l.id === leadId);
+        if (lead) {
+            const appointmentTask = await addTask({
+                lead: { id: lead.id, name: lead.name, photoUrl: lead.photoUrl },
+                assignedTo: lead.assignedTo,
+                title: `Appointment for ${lead.name}`,
+                dueDate: appointmentDetails.dueDate,
+                type: 'Appointment',
+            });
+
+            // Update lead status to 'Appointment Scheduled'
+            await updateLeadStatus(lead.id, 'Appointment Scheduled', creatorId);
+
+            // Add note if provided
+            if (appointmentDetails.notes) {
+                await addNote(leadId, `Appointment Note: ${appointmentDetails.notes}`, creatorId);
+            }
+            createdTasks.push(appointmentTask);
+        }
+    }
+    return { success: true, createdTasks };
+};
+
+export const updateTaskStatus = async (taskId: string, status: 'Pending' | 'Done' | 'Overdue', userId: string): Promise<Task | null> => {
     const task = tasks.find(t => t.id === taskId);
     if (task) {
         task.status = status;
+        if (status === 'Done') {
+            const user = users.find(u => u.id === userId);
+            if(user) task.completedBy = user;
+            task.completedAt = new Date().toISOString();
+        }
         await mockDelay(50);
         return { ...task };
     }

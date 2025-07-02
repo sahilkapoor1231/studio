@@ -40,6 +40,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast'
 import { deleteLead } from '@/lib/data'
+import { Checkbox } from '../ui/checkbox'
+import { BulkActionsToolbar } from './bulk-actions-toolbar'
 
 const statusColors: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
     'New': 'default',
@@ -52,6 +54,27 @@ const statusColors: { [key: string]: 'default' | 'secondary' | 'destructive' | '
 
 export function LeadTable({ leads, onLeadUpdated, onLeadDeleted }: { leads: Lead[], onLeadUpdated: (lead: Lead) => void, onLeadDeleted: (leadId: string) => void }) {
   const { toast } = useToast()
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+        setSelectedLeadIds(new Set(leads.map(lead => lead.id)));
+    } else {
+        setSelectedLeadIds(new Set());
+    }
+  }
+
+  const handleSelectOne = (leadId: string, checked: boolean) => {
+    const newSet = new Set(selectedLeadIds);
+    if (checked) {
+        newSet.add(leadId);
+    } else {
+        newSet.delete(leadId);
+    }
+    setSelectedLeadIds(newSet);
+  }
+
+  const isAllSelected = selectedLeadIds.size === leads.length && leads.length > 0;
   
   const handleDelete = async (leadId: string) => {
     try {
@@ -61,6 +84,11 @@ export function LeadTable({ leads, onLeadUpdated, onLeadDeleted }: { leads: Lead
       toast({
         title: "Lead Deleted",
         description: "The lead record has been deleted.",
+      });
+      setSelectedLeadIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(leadId);
+        return newSet;
       });
     } catch (error) {
       toast({
@@ -80,6 +108,13 @@ export function LeadTable({ leads, onLeadUpdated, onLeadDeleted }: { leads: Lead
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                  <Checkbox 
+                    checked={isAllSelected} 
+                    onCheckedChange={handleSelectAll} 
+                    aria-label="Select all rows"
+                   />
+              </TableHead>
               <TableHead>Customer</TableHead>
               <TableHead className="hidden md:table-cell">Source</TableHead>
               <TableHead>Status</TableHead>
@@ -92,7 +127,14 @@ export function LeadTable({ leads, onLeadUpdated, onLeadDeleted }: { leads: Lead
           </TableHeader>
           <TableBody>
             {leads.map((lead) => (
-              <TableRow key={lead.id}>
+              <TableRow key={lead.id} data-state={selectedLeadIds.has(lead.id) && "selected"}>
+                <TableCell>
+                    <Checkbox 
+                        checked={selectedLeadIds.has(lead.id)}
+                        onCheckedChange={(checked) => handleSelectOne(lead.id, !!checked)}
+                        aria-label={`Select row for ${lead.name}`}
+                    />
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="hidden h-9 w-9 sm:flex">
@@ -187,6 +229,13 @@ export function LeadTable({ leads, onLeadUpdated, onLeadDeleted }: { leads: Lead
           </TableBody>
         </Table>
       </CardContent>
+      {selectedLeadIds.size > 0 && (
+        <BulkActionsToolbar 
+            selectedCount={selectedLeadIds.size} 
+            selectedLeadIds={Array.from(selectedLeadIds)}
+            onClearSelection={() => setSelectedLeadIds(new Set())} 
+        />
+      )}
     </Card>
   )
 }

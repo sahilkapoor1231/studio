@@ -8,6 +8,7 @@ import {
   KanbanSquare,
   LayoutDashboard,
   LogOut,
+  Puzzle,
   Settings,
   Sparkles,
   Trash2,
@@ -28,6 +29,7 @@ const menuItems = [
   { href: '/pipeline', label: 'Pipeline', icon: KanbanSquare },
   { href: '/calendar', label: 'Calendar', icon: Calendar },
   { href: '/reports', label: 'Reports', icon: BarChart },
+  { href: '/integrations', label: 'Integrations', icon: Puzzle },
   { href: '/settings', label: 'Settings', icon: Settings },
   { href: '/deleted-leads', label: 'Recycle Bin', icon: Trash2 },
 ];
