@@ -27,13 +27,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
-import { addTask, updateLeadStatus, getTasks, updateTaskStatus } from "@/lib/data"
+import { addTask as addTaskToDb, updateLeadStatus, updateTaskStatus as updateTaskStatusInDb } from "@/lib/data"
 import type { Lead, Task } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { format, formatISO, set, startOfToday } from "date-fns"
 import { CalendarIcon, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { useAppContext } from "@/lib/app-context"
 
 const formSchema = z.object({
   appointmentDate: z.date({ required_error: "An appointment date is required." }),
@@ -48,6 +49,7 @@ export function BookAppointmentDialog({ children, lead, isRescheduling }: { chil
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast()
   const router = useRouter();
+  const { addTask, updateTask, tasks: allTasksFromContext } = useAppContext();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -71,7 +73,9 @@ export function BookAppointmentDialog({ children, lead, isRescheduling }: { chil
             assignedTo: lead.assignedTo
         }
 
-        await addTask(taskData);
+        const newTask = await addTaskToDb(taskData);
+        addTask(newTask);
+
         // In a real app, the current user ID would come from an auth context
         const { updatedLead } = await updateLeadStatus(lead.id, 'Appointment Scheduled', 'user-2');
 
@@ -80,20 +84,21 @@ export function BookAppointmentDialog({ children, lead, isRescheduling }: { chil
         }
 
         // Resolve any overdue tasks for this lead
-        const allTasks = await getTasks();
-        const overdueTasksForLead = allTasks.filter(
+        const overdueTasksForLead = allTasksFromContext.filter(
             t => t.lead.id === lead.id && t.status === 'Overdue'
         );
 
         for (const task of overdueTasksForLead) {
-            await updateTaskStatus(task.id, 'Done', 'user-2');
+            const updatedTask = await updateTaskStatusInDb(task.id, 'Done', 'user-2');
+            if (updatedTask) {
+              updateTask(updatedTask);
+            }
         }
         
         toast({
             title: isRescheduling ? "Appointment Rescheduled" : "Appointment Booked",
             description: `An appointment has been scheduled for ${lead.name}.`,
         })
-        window.dispatchEvent(new CustomEvent('notifications-updated'));
         setOpen(false)
         router.refresh();
     } catch (error) {

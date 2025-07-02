@@ -27,12 +27,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
-import { bulkCreateAppointments } from "@/lib/data"
+import { bulkCreateAppointments as bulkCreateAppointmentsInDb } from "@/lib/data"
 import { useToast } from "@/hooks/use-toast"
 import { format, formatISO, set, startOfToday } from "date-fns"
 import { CalendarIcon, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { useAppContext } from "@/lib/app-context"
 
 const formSchema = z.object({
   appointmentDate: z.date({ required_error: "An appointment date is required." }),
@@ -55,6 +56,7 @@ export function BulkScheduleAppointmentDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast()
   const router = useRouter();
+  const { addTask } = useAppContext();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -69,17 +71,20 @@ export function BulkScheduleAppointmentDialog({
         const [hours, minutes] = values.appointmentTime.split(':').map(Number);
         const combinedDueDate = set(values.appointmentDate, { hours, minutes });
 
-        await bulkCreateAppointments(
+        const { success, createdTasks } = await bulkCreateAppointmentsInDb(
             leadIds,
             { dueDate: formatISO(combinedDueDate), notes: values.notes },
             'user-2' // Assume current user is user-2
         );
         
+        if (success) {
+            createdTasks.forEach(task => addTask(task));
+        }
+
         toast({
             title: "Appointments Booked",
             description: `An appointment has been scheduled for ${leadIds.length} leads.`,
         })
-        window.dispatchEvent(new CustomEvent('notifications-updated'));
         onComplete();
         setOpen(false)
         router.refresh();

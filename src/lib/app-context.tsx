@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, ReactNode, useState, useCallback } from 'react';
-import type { User, PipelineStage, CustomFieldDefinition, RoundRobinRule, WorkflowRule } from './types';
+import type { User, PipelineStage, CustomFieldDefinition, RoundRobinRule, WorkflowRule, Task, Lead } from './types';
 
 type AppContextType = {
   // Data
@@ -11,6 +11,8 @@ type AppContextType = {
   customFields: CustomFieldDefinition[];
   roundRobinRules: RoundRobinRule[];
   workflows: WorkflowRule[];
+  tasks: Task[];
+  allLeads: Lead[];
 
   // Updaters
   addCustomField: (field: CustomFieldDefinition) => void;
@@ -25,6 +27,8 @@ type AppContextType = {
   deleteUser: (userId: string) => void;
   addRoundRobinRule: (rule: RoundRobinRule) => void;
   deleteRoundRobinRule: (ruleId: string) => void;
+  addTask: (task: Task) => void;
+  updateTask: (task: Task) => void;
 };
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -36,6 +40,8 @@ type InitialData = {
     customFields: CustomFieldDefinition[];
     roundRobinRules: RoundRobinRule[];
     workflows: WorkflowRule[];
+    tasks: Task[];
+    allLeads: Lead[];
 }
 
 export function AppContextProvider({ children, initialData }: { children: ReactNode; initialData: InitialData }) {
@@ -44,6 +50,8 @@ export function AppContextProvider({ children, initialData }: { children: ReactN
     const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>(initialData.customFields);
     const [roundRobinRules, setRoundRobinRules] = useState<RoundRobinRule[]>(initialData.roundRobinRules);
     const [workflows, setWorkflows] = useState<WorkflowRule[]>(initialData.workflows);
+    const [tasks, setTasks] = useState<Task[]>(initialData.tasks);
+    const [allLeads, setAllLeads] = useState<Lead[]>(initialData.allLeads);
 
     const assignableUsers = allUsers.filter(u => u.role === 'Counselor' || u.role === 'Receptionist');
 
@@ -111,6 +119,14 @@ export function AppContextProvider({ children, initialData }: { children: ReactN
         setRoundRobinRules(prev => prev.filter(r => r.id !== ruleId));
     }, []);
 
+    const handleAddTask = useCallback((task: Task) => {
+        setTasks(prev => [task, ...prev]);
+    }, []);
+
+    const handleUpdateTask = useCallback((updatedTask: Task) => {
+        setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+    }, []);
+
     const value: AppContextType = {
         allUsers,
         assignableUsers,
@@ -118,6 +134,8 @@ export function AppContextProvider({ children, initialData }: { children: ReactN
         customFields,
         roundRobinRules,
         workflows,
+        tasks,
+        allLeads,
         addCustomField: handleAddCustomField,
         deleteCustomField: handleDeleteCustomField,
         addPipelineStage: handleAddPipelineStage,
@@ -130,6 +148,8 @@ export function AppContextProvider({ children, initialData }: { children: ReactN
         deleteUser: handleDeleteUser,
         addRoundRobinRule: handleAddRoundRobinRule,
         deleteRoundRobinRule: handleDeleteRoundRobinRule,
+        addTask: handleAddTask,
+        updateTask: handleUpdateTask,
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

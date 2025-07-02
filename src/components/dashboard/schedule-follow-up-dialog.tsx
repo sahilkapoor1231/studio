@@ -27,13 +27,14 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { addTask } from "@/lib/data"
+import { addTask as addTaskToDb } from "@/lib/data"
 import type { Lead, Task } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { format, formatISO, set, startOfToday } from "date-fns"
 import { CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { useAppContext } from "@/lib/app-context"
 
 const formSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters." }),
@@ -49,6 +50,7 @@ export function ScheduleFollowUpDialog({ children, lead }: { children: React.Rea
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast()
   const router = useRouter();
+  const { addTask } = useAppContext();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -73,13 +75,13 @@ export function ScheduleFollowUpDialog({ children, lead }: { children: React.Rea
             assignedTo: lead.assignedTo
         }
 
-        await addTask(taskData);
+        const newTask = await addTaskToDb(taskData);
+        addTask(newTask);
         
         toast({
             title: "Follow-up Scheduled",
             description: `A new task has been created for ${lead.name}.`,
         })
-        window.dispatchEvent(new CustomEvent('notifications-updated'));
         setOpen(false)
         router.refresh() // Refresh to show new task on calendar etc.
     } catch (error) {
