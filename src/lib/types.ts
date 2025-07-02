@@ -76,7 +76,7 @@ export type Task = {
   lead: Pick<Lead, 'id' | 'name' | 'photoUrl'>;
   assignedTo: User;
   title: string;
-  dueDate: string;
+  dueDate: string; // Full ISO 8601 string with date and time
   status: 'Pending' | 'Done' | 'Overdue';
   type: 'Call' | 'Message' | 'Appointment';
   completedAt?: string;
@@ -131,13 +131,20 @@ export type SendWhatsAppAction = {
     template: string; // The message template
 };
 
+export type SendNotificationAction = {
+    type: 'SEND_NOTIFICATION';
+    minutesBefore: number;
+    template: string;
+};
+
 export type WorkflowAction = 
     | CreateTaskAction 
     | UpdateLeadFieldAction 
     | AddTagAction 
     | AddNoteAction
     | SendEmailAction
-    | SendWhatsAppAction;
+    | SendWhatsAppAction
+    | SendNotificationAction;
 
 export type WorkflowConditionField = 'source' | 'inquiryType' | 'status' | 'stage';
 export type WorkflowConditionOperator = 'EQUALS' | 'NOT_EQUALS';

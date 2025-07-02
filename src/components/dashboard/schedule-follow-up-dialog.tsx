@@ -30,7 +30,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { addTask } from "@/lib/data"
 import type { Lead, Task } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
-import { format, formatISO } from "date-fns"
+import { format, formatISO, set } from "date-fns"
 import { CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
@@ -38,6 +38,7 @@ import { useRouter } from "next/navigation"
 const formSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters." }),
   dueDate: z.date({ required_error: "A due date is required." }),
+  dueTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)"),
   type: z.enum(['Call', 'Message']),
 });
 
@@ -54,16 +55,20 @@ export function ScheduleFollowUpDialog({ children, lead }: { children: React.Rea
     defaultValues: {
       title: `Follow up with ${lead.name}`,
       type: 'Call',
+      dueTime: '09:00',
     },
   })
 
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
     try {
+        const [hours, minutes] = values.dueTime.split(':').map(Number);
+        const combinedDueDate = set(values.dueDate, { hours, minutes });
+
         const taskData: Omit<Task, 'id' | 'status' | 'completedAt' | 'completedBy'> = {
             lead: { id: lead.id, name: lead.name, photoUrl: lead.photoUrl },
             title: values.title,
-            dueDate: formatISO(values.dueDate),
+            dueDate: formatISO(combinedDueDate),
             type: values.type,
             assignedTo: lead.assignedTo
         }
@@ -135,47 +140,62 @@ export function ScheduleFollowUpDialog({ children, lead }: { children: React.Rea
                     </FormItem>
                 )}
             />
-             <FormField
-                control={form.control}
-                name="dueDate"
-                render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Due Date</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <FormControl>
-                            <Button
-                            variant={"outline"}
-                            className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                            )}
-                            >
-                            {field.value ? (
-                                format(field.value, "PPP")
-                            ) : (
-                                <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                        </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                                date < new Date() || date < new Date("1900-01-01")
-                            }
-                            initialFocus
-                        />
-                        </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                    </FormItem>
-                )}
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="dueDate"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                        <FormLabel>Due Date</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <FormControl>
+                                <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                )}
+                                >
+                                {field.value ? (
+                                    format(field.value, "PPP")
+                                ) : (
+                                    <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                            </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) =>
+                                    date < new Date() || date < new Date("1900-01-01")
+                                }
+                                initialFocus
+                            />
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                        </FormItem>
+                    )}
                 />
+                 <FormField
+                    control={form.control}
+                    name="dueTime"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Due Time</FormLabel>
+                            <FormControl>
+                                <Input type="time" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
             
             <DialogFooter>
                 <DialogClose asChild>

@@ -29,7 +29,7 @@ import type { WorkflowRule, WorkflowTriggerType, WorkflowAction, WorkflowConditi
 import { useToast } from "@/hooks/use-toast"
 import { addWorkflow as addWorkflowToDb } from "@/lib/data"
 import { Textarea } from "@/components/ui/textarea"
-import { HelpCircle, Mail, MessageSquare, PlusCircle, Trash2 } from "lucide-react"
+import { HelpCircle, Mail, MessageSquare, PlusCircle, Trash2, Bell } from "lucide-react"
 import { useAppContext } from "@/lib/app-context"
 
 function PlaceholderHelpDialog() {
@@ -42,21 +42,23 @@ function PlaceholderHelpDialog() {
                 <DialogHeader>
                     <DialogTitle>Using Dynamic Placeholders in Workflows</DialogTitle>
                     <DialogDescription>
-                        You can make your automated actions dynamic by inserting placeholders. These will be replaced with the lead's actual information when the workflow runs.
+                        You can make your automated actions dynamic by inserting placeholders. These will be replaced with the lead's or task's actual information when the workflow runs.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 text-sm max-h-[60vh] overflow-y-auto pr-4">
                     <div>
-                        <h4 className="font-semibold mb-2">Available Placeholders</h4>
+                        <h4 className="font-semibold mb-2">Available Lead Placeholders</h4>
                         <ul className="list-none space-y-2 text-muted-foreground bg-muted/50 p-3 rounded-md border">
                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.name}}'}</code> - The full name of the lead.</li>
                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.email}}'}</code> - The lead's email address.</li>
                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.phone}}'}</code> - The lead's phone number.</li>
-                            <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.source}}'}</code> - Where the lead came from.</li>
-                            <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.inquiryType}}'}</code> - The type of inquiry.</li>
-                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.status}}'}</code> - The lead's current status/pipeline stage.</li>
-                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.stage}}'}</code> - The lead's current sub-stage.</li>
                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.assignedTo.name}}'}</code> - Name of the assigned team member.</li>
+                        </ul>
+                    </div>
+                     <div>
+                        <h4 className="font-semibold mb-2">Available Task Placeholders (for Notifications)</h4>
+                        <ul className="list-none space-y-2 text-muted-foreground bg-muted/50 p-3 rounded-md border">
+                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{task.title}}'}</code> - The title of the task.</li>
                         </ul>
                     </div>
 
@@ -66,28 +68,11 @@ function PlaceholderHelpDialog() {
                              <p className="text-muted-foreground">
                                 <strong>Template:</strong>
                             </p>
-                             <pre className="text-xs bg-muted p-2 rounded-md">Follow up with {'{{lead.name}}'} about their {'{{inquiryType}}'} inquiry.</pre>
+                             <pre className="text-xs bg-muted p-2 rounded-md">Follow up with {'{{lead.name}}'}</pre>
                              <p className="text-muted-foreground">
                                 <strong>Result (for a lead named John Doe):</strong>
                             </p>
-                             <pre className="text-xs bg-muted p-2 rounded-md">Follow up with John Doe about their IVF Journey inquiry.</pre>
-                        </div>
-                    </div>
-
-                     <div>
-                        <h4 className="font-semibold mb-2">Example: Sending an Email</h4>
-                         <div className="p-3 rounded-md border space-y-2">
-                             <p className="text-muted-foreground">
-                                <strong>Recipient:</strong> <code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.email}}'}</code>
-                            </p>
-                             <p className="text-muted-foreground">
-                                <strong>Template:</strong>
-                            </p>
-                             <pre className="text-xs bg-muted p-2 rounded-md">Hi {'{{lead.name}}'}, thanks for your inquiry. We will contact you shortly.</pre>
-                             <p className="text-muted-foreground">
-                                <strong>Result (for a lead named Jane):</strong>
-                            </p>
-                             <pre className="text-xs bg-muted p-2 rounded-md">Hi Jane, thanks for your inquiry. We will contact you shortly.</pre>
+                             <pre className="text-xs bg-muted p-2 rounded-md">Follow up with John Doe</pre>
                         </div>
                     </div>
                 </div>
@@ -137,6 +122,11 @@ const formSchema = z.discriminatedUnion("actionType", [
         actionType: z.literal("SEND_WHATSAPP"),
         actionRecipient: z.string().min(1, { message: "Recipient is required." }),
         actionTemplate: z.string().min(1, { message: "Message is required." }),
+    }),
+    z.object({
+        actionType: z.literal("SEND_NOTIFICATION"),
+        actionMinutes: z.coerce.number().min(0, "Cannot be negative"),
+        actionTemplate: z.string().min(3, { message: "Template is required." }),
     }),
 ]).and(baseSchema)
 .refine(data => {
@@ -196,6 +186,8 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
             action = { type: 'SEND_EMAIL', recipient: values.actionRecipient, template: values.actionTemplate };
         } else if (values.actionType === 'SEND_WHATSAPP') {
             action = { type: 'SEND_WHATSAPP', recipient: values.actionRecipient, template: values.actionTemplate };
+        } else if (values.actionType === 'SEND_NOTIFICATION') {
+            action = { type: 'SEND_NOTIFICATION', minutesBefore: values.actionMinutes, template: values.actionTemplate };
         } else {
              action = { type: 'ADD_NOTE', template: values.actionTemplate };
         }
@@ -377,7 +369,7 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                     control={form.control}
                     name="actionType"
                     render={({ field }) => (
-                        <FormItem><FormLabel>Action</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select an action" /></SelectTrigger></FormControl><SelectContent><SelectItem value="CREATE_TASK">Create Task</SelectItem><SelectItem value="UPDATE_LEAD_FIELD">Update Lead Field</SelectItem><SelectItem value="ADD_TAG">Add Tag</SelectItem><SelectItem value="ADD_NOTE">Add Note</SelectItem><SelectItem value="SEND_EMAIL"><div className="flex items-center gap-2"><Mail/> Send Email</div></SelectItem><SelectItem value="SEND_WHATSAPP"><div className="flex items-center gap-2"><MessageSquare/> Send WhatsApp</div></SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Action</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select an action" /></SelectTrigger></FormControl><SelectContent><SelectItem value="CREATE_TASK">Create Task</SelectItem><SelectItem value="UPDATE_LEAD_FIELD">Update Lead Field</SelectItem><SelectItem value="ADD_TAG">Add Tag</SelectItem><SelectItem value="ADD_NOTE">Add Note</SelectItem><SelectItem value="SEND_EMAIL"><div className="flex items-center gap-2"><Mail/> Send Email</div></SelectItem><SelectItem value="SEND_WHATSAPP"><div className="flex items-center gap-2"><MessageSquare/> Send WhatsApp</div></SelectItem><SelectItem value="SEND_NOTIFICATION"><div className="flex items-center gap-2"><Bell/> Send Notification</div></SelectItem></SelectContent></Select><FormMessage /></FormItem>
                     )}
                 />
 
@@ -425,6 +417,41 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                                     </FormLabel>
                                     <FormControl>
                                         <Textarea placeholder="e.g., Hi {{lead.name}}, confirming your appointment." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </>
+                )}
+                
+                {actionType === 'SEND_NOTIFICATION' && (
+                    <>
+                        <FormField
+                            control={form.control}
+                            name="actionMinutes"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Send reminder before</FormLabel>
+                                    <div className="flex items-center gap-2">
+                                        <FormControl><Input className="w-24" type="number" min="0" placeholder="e.g., 30" {...field} /></FormControl>
+                                        <span>minutes</span>
+                                    </div>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="actionTemplate"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2">
+                                        Notification Message
+                                        <PlaceholderHelpDialog />
+                                    </FormLabel>
+                                    <FormControl>
+                                        <Textarea placeholder="e.g., Reminder: {{task.title}} for {{lead.name}} is due soon." {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

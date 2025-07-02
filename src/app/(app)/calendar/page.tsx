@@ -16,7 +16,7 @@ import {
   startOfToday,
   parseISO,
 } from 'date-fns'
-import { ChevronLeft, ChevronRight, User } from 'lucide-react'
+import { ChevronLeft, ChevronRight, User, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -38,6 +38,8 @@ export default function CalendarPage() {
     async function loadTasks() {
         setIsLoading(true);
         const fetchedTasks = await getTasks();
+        // Sort tasks by due date
+        fetchedTasks.sort((a, b) => parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime());
         setTasks(fetchedTasks);
         setIsLoading(false);
     }
@@ -122,7 +124,7 @@ export default function CalendarPage() {
                                 </button>
                                 <div className="w-1 h-1 mx-auto mt-1">
                                     {tasks.some(task => isSameDay(parseISO(task.dueDate), day)) && (
-                                        <div className="w-1 h-1 rounded-full bg-accent"></div>
+                                        <div className="w-1 h-1 rounded-full bg-primary/50"></div>
                                     )}
                                 </div>
                             </div>
@@ -141,15 +143,17 @@ export default function CalendarPage() {
                             </div>
                         ) : selectedDayTasks.length > 0 ? (
                             selectedDayTasks.map((task) => (
-                                <li key={task.id} className="flex items-center gap-3 rounded-lg bg-secondary p-3">
-                                    <Avatar className="h-9 w-9 border">
-                                        <AvatarImage src={task.lead.photoUrl} alt={task.lead.name} data-ai-hint="person face" />
-                                        <AvatarFallback>{task.lead.name.charAt(0)}</AvatarFallback>
-                                    </Avatar>
+                                <li key={task.id} className="flex items-start gap-3 rounded-lg bg-secondary p-3">
+                                    <div className="flex items-center justify-center bg-primary/10 text-primary rounded-md h-9 w-12 flex-col text-xs font-bold">
+                                        <span>{format(parseISO(task.dueDate), 'p')}</span>
+                                    </div>
                                     <div className="flex-1">
                                         <p className="font-medium text-sm">{task.title}</p>
                                         <Link href={`/leads/${task.lead.id}`} className="text-xs text-muted-foreground hover:underline flex items-center gap-1">
-                                            <User className="h-3 w-3" />
+                                            <Avatar className="h-4 w-4 border text-xs">
+                                                <AvatarImage src={task.lead.photoUrl} alt={task.lead.name} data-ai-hint="person face" />
+                                                <AvatarFallback>{task.lead.name.charAt(0)}</AvatarFallback>
+                                            </Avatar>
                                             {task.lead.name}
                                         </Link>
                                     </div>
