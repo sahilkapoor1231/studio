@@ -63,7 +63,8 @@ export function BookAppointmentDialog({ children, lead }: { children: React.Reac
         }
 
         await addTask(taskData);
-        await updateLeadStatus(lead.id, 'Appointment Scheduled');
+        // In a real app, the current user ID would come from an auth context
+        await updateLeadStatus(lead.id, 'Appointment Scheduled', 'user-2');
 
         // Resolve any overdue tasks for this lead
         const allTasks = await getTasks();

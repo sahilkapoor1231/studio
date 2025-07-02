@@ -49,7 +49,8 @@ export function PatientInfoCard({ lead, isReadOnly }: { lead: Lead, isReadOnly?:
     if (isReadOnly) return;
     setIsUpdating(true);
     try {
-      await updateLeadStatus(lead.id, 'No Go');
+      // In a real app, the current user ID would come from an auth context
+      await updateLeadStatus(lead.id, 'No Go', 'user-2');
       toast({
         title: "Lead Status Updated",
         description: `${lead.name} has been marked as "No Go".`

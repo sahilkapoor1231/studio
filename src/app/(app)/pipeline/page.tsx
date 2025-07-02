@@ -65,7 +65,8 @@ export default function PipelinePage() {
 
                 // Update on the "backend"
                 try {
-                    const { success, workflowTriggered } = await updateLeadStatus(leadId, newStatus);
+                    // In a real app, the current user ID would come from an auth context
+                    const { success, workflowTriggered } = await updateLeadStatus(leadId, newStatus, 'user-2');
                     
                     if (!success) {
                         throw new Error("Update failed on server");
