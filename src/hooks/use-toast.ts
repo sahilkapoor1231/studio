@@ -105,25 +105,34 @@ export const reducer = (state: State, action: Action): State => {
       }
 
     case "DISMISS_TOAST": {
-      const { toastId } = action
+      const { toastId } = action;
+
+      // This action should NOT affect pinned toasts.
+      // So, if a specific toast is targeted, first check if it's pinned.
+      if (toastId) {
+        const toastToDismiss = state.toasts.find((t) => t.id === toastId);
+        if (toastToDismiss?.pinned) {
+          // If it's pinned, do nothing.
+          return state;
+        }
+      }
+
       return {
         ...state,
         toasts: state.toasts.map((t) => {
-          if (t.id === toastId || toastId === undefined) {
-            // This is a toast we might want to dismiss
-            if (t.pinned) {
-              // It's pinned, so do nothing to it.
-              return t;
-            } else {
-              // It's not pinned, so start the dismissal process.
-              addToRemoveQueue(t.id);
-              return {
-                ...t,
-                open: false,
-              };
-            }
+          // For a specific toastId, if it's not pinned, close it.
+          if (t.id === toastId) {
+            addToRemoveQueue(t.id);
+            return { ...t, open: false };
           }
-          // This is not a toast we're dismissing, so leave it as is.
+
+          // For a general dismiss (no toastId), close all unpinned toasts.
+          if (toastId === undefined && !t.pinned) {
+            addToRemoveQueue(t.id);
+            return { ...t, open: false };
+          }
+
+          // Otherwise, leave the toast as is.
           return t;
         }),
       };
@@ -133,10 +142,11 @@ export const reducer = (state: State, action: Action): State => {
         const { toastId } = action
         const toast = state.toasts.find((t) => t.id === toastId)
         if (toast) {
-            if (!toast.pinned) {
-                removeFromRemoveQueue(toastId)
-            } else {
+            // When unpinning a toast, add it to the remove queue so it will eventually disappear.
+            if (toast.pinned) {
                 addToRemoveQueue(toastId)
+            } else { // When pinning a toast, remove it from the queue so it stays.
+                removeFromRemoveQueue(toastId)
             }
         }
         return {
