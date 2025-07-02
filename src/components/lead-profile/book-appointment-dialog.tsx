@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input"
 import { addTask, updateLeadStatus, getTasks, updateTaskStatus } from "@/lib/data"
 import type { Lead, Task } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
-import { format, formatISO, set } from "date-fns"
+import { format, formatISO, set, startOfToday } from "date-fns"
 import { CalendarIcon, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
@@ -152,7 +152,7 @@ export function BookAppointmentDialog({ children, lead, isRescheduling }: { chil
                                 selected={field.value}
                                 onSelect={field.onChange}
                                 disabled={(date) =>
-                                    date < new Date() || date < new Date("1900-01-01")
+                                    date < startOfToday()
                                 }
                                 initialFocus
                             />
