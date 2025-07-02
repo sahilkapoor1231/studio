@@ -24,7 +24,6 @@ import {
 } from 'lucide-react'
 import { Separator } from '../ui/separator'
 import { updateLeadStatus } from '@/lib/data'
-import { Skeleton } from '../ui/skeleton'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 import { BookAppointmentDialog } from './book-appointment-dialog'
@@ -35,7 +34,6 @@ export function PatientInfoCard({ lead, isReadOnly }: { lead: Lead, isReadOnly?:
   const router = useRouter();
   const { toast } = useToast();
   
-  // Get custom fields from context, no more fetching
   const { customFields: customFieldDefs } = useAppContext();
   
   const populatedCustomFields = customFieldDefs
@@ -66,6 +64,8 @@ export function PatientInfoCard({ lead, isReadOnly }: { lead: Lead, isReadOnly?:
         setIsUpdating(false);
     }
   }
+
+  const hasAppointment = lead.status === 'Appointment Scheduled';
 
   return (
     <Card>
@@ -142,9 +142,10 @@ export function PatientInfoCard({ lead, isReadOnly }: { lead: Lead, isReadOnly?:
             <Phone className="mr-2 h-4 w-4" /> Call
           </a>
         </Button>
-        <BookAppointmentDialog lead={lead}>
+        <BookAppointmentDialog lead={lead} isRescheduling={hasAppointment}>
             <Button disabled={isUpdating || isReadOnly}>
-                <CalendarPlus className="mr-2 h-4 w-4" /> Book Appt.
+                <CalendarPlus className="mr-2 h-4 w-4" />
+                {hasAppointment ? 'Reschedule' : 'Book Appt.'}
             </Button>
         </BookAppointmentDialog>
         <Button variant="destructive" onClick={handleNoGo} disabled={isUpdating || isReadOnly}>

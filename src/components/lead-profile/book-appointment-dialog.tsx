@@ -30,7 +30,7 @@ import { addTask, updateLeadStatus, getTasks, updateTaskStatus } from "@/lib/dat
 import type { Lead, Task } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { format, formatISO } from "date-fns"
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 
@@ -41,7 +41,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function BookAppointmentDialog({ children, lead }: { children: React.ReactNode, lead: Lead }) {
+export function BookAppointmentDialog({ children, lead, isRescheduling }: { children: React.ReactNode, lead: Lead, isRescheduling?: boolean }) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast()
@@ -78,7 +78,7 @@ export function BookAppointmentDialog({ children, lead }: { children: React.Reac
         }
         
         toast({
-            title: "Appointment Booked",
+            title: isRescheduling ? "Appointment Rescheduled" : "Appointment Booked",
             description: `An appointment has been scheduled for ${lead.name}.`,
         })
         window.dispatchEvent(new CustomEvent('notifications-updated'));
@@ -101,9 +101,9 @@ export function BookAppointmentDialog({ children, lead }: { children: React.Reac
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Book Appointment</DialogTitle>
+          <DialogTitle>{isRescheduling ? 'Reschedule' : 'Book'} Appointment</DialogTitle>
           <DialogDescription>
-            Schedule an appointment for {lead.name}.
+            {isRescheduling ? 'Update the appointment' : 'Schedule an appointment'} for {lead.name}.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -168,7 +168,7 @@ export function BookAppointmentDialog({ children, lead }: { children: React.Reac
                     <Button type="button" variant="secondary">Cancel</Button>
                 </DialogClose>
                 <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? 'Booking...' : 'Book Appointment'}
+                    {isSubmitting ? 'Booking...' : (isRescheduling ? 'Reschedule' : 'Book Appointment')}
                 </Button>
             </DialogFooter>
           </form>
