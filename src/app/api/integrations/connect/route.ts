@@ -29,9 +29,8 @@ export async function POST(request: Request) {
         if (!isValid) errorMessage = 'Invalid Zapier Webhook URL format.';
         break;
       case 'email':
-        // Simple regex for a secret key, e.g., alphanumeric
-        isValid = /^[a-zA-Z0-9-]{10,}$/.test(apiKey);
-        if (!isValid) errorMessage = 'Forwarding key must be at least 10 alphanumeric characters.';
+        isValid = /\S+@\S+\.\S+/.test(apiKey);
+        if (!isValid) errorMessage = 'Please enter a valid email address.';
         break;
       case 'whatsapp':
         isValid = apiKey.length > 20; // Generic check
@@ -40,9 +39,9 @@ export async function POST(request: Request) {
         isValid = apiKey.startsWith('EAA'); // Common prefix for Meta access tokens
         if (!isValid) errorMessage = 'Invalid Meta Access Token format. It should start with "EAA".';
         break;
-      case 'google-calendar':
-        isValid = apiKey.startsWith('AIza'); // Common prefix for Google API keys
-        if (!isValid) errorMessage = 'Invalid Google API Key format.';
+      case 'google-ads':
+        isValid = /\S+@\S+\.\S+/.test(apiKey);
+        if (!isValid) errorMessage = 'Please enter a valid email address.';
         break;
       case 'mailchimp':
         isValid = /^[a-f0-9]{32}-us\d{1,2}$/.test(apiKey); // Standard Mailchimp key format

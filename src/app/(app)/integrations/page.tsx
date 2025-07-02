@@ -31,13 +31,13 @@ const MetaLogo = () => (
     </svg>
 )
 
-const GoogleCalendarLogo = () => (
+const GoogleAdsLogo = () => (
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M6 4V2H8V4H16V2H18V4H19C20.1046 4 21 4.89543 21 6V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V6C3 4.89543 3.89543 4 5 4H6Z" fill="#4285F4"/>
-        <path d="M3 10H21V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V10Z" fill="#34A853"/>
-        <path d="M21 6V10H3V6C3 4.89543 3.89543 4 5 4H19C20.1046 4 21 4.89543 21 6Z" fill="#FBBC05"/>
-        <path d="M16 2V5H8V2H16Z" fill="#EA4335"/>
-        <path d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z" fill="#FFFFFF"/>
+        <path d="M12.25 2.00006L5.5 6.25006V15.0001L12.25 19.2501L19 15.0001V6.25006L12.25 2.00006Z" fill="#FBBC04"/>
+        <path d="M12.25 11.5V19.25L19 15V6.25L12.25 11.5Z" fill="#F29900"/>
+        <path d="M5.5 6.25L12.25 11.5L19 6.25L12.25 2L5.5 6.25Z" fill="#FCDA74"/>
+        <path d="M11 14L8.5 12.5V9.5L11 8V14Z" fill="#4285F4"/>
+        <path d="M11 8L13.5 9.5V12.5L11 14V8Z" fill="#8AB4F8"/>
     </svg>
 )
 
@@ -48,7 +48,7 @@ const MailchimpLogo = () => (
 )
 
 type Integration = {
-    id: 'zapier' | 'email' | 'whatsapp' | 'meta' | 'google-calendar' | 'mailchimp';
+    id: 'zapier' | 'email' | 'whatsapp' | 'meta' | 'google-ads' | 'mailchimp';
     name: string;
     description: string;
     logo: JSX.Element;
@@ -72,8 +72,8 @@ const integrationsData: Integration[] = [
         name: "Email Forwarding",
         description: "Set up a secret forwarding address to create leads from emails.",
         logo: <Mail className="w-10 h-10 text-primary" />,
-        apiKeyLabel: "Forwarding Secret Key",
-        placeholder: "Enter your unique forwarding key",
+        apiKeyLabel: "Forwarding Email Address",
+        placeholder: "your-secret-forwarding-address@leadflow.app",
         isInput: true,
     },
     {
@@ -95,12 +95,12 @@ const integrationsData: Integration[] = [
         isInput: true,
     },
     {
-        id: 'google-calendar',
-        name: 'Google Calendar',
-        description: 'Sync your appointments and tasks with your Google Calendar.',
-        logo: <GoogleCalendarLogo />,
-        apiKeyLabel: 'Google Calendar API Key',
-        placeholder: 'Enter your Google Calendar API Key',
+        id: 'google-ads',
+        name: 'Google Ads',
+        description: 'Forward leads from Google Ads to a unique email address.',
+        logo: <GoogleAdsLogo />,
+        apiKeyLabel: 'Forwarding Email Address',
+        placeholder: 'your-gads-forwarding-address@leadflow.app',
         isInput: true,
     },
     {
@@ -128,7 +128,7 @@ export default function IntegrationsPage() {
         email: { apiKey: '', connected: false },
         whatsapp: { apiKey: '', connected: false },
         meta: { apiKey: '', connected: false },
-        'google-calendar': { apiKey: '', connected: false },
+        'google-ads': { apiKey: '', connected: false },
         mailchimp: { apiKey: '', connected: false },
     });
     const [isLoading, setIsLoading] = useState<Partial<Record<Integration['id'], boolean>>>({});
