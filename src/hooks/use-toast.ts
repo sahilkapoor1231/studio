@@ -8,14 +8,15 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_LIMIT = 5
+const TOAST_REMOVE_DELAY = 5000
 
 type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
+  pinned?: boolean
 }
 
 const actionTypes = {
@@ -23,6 +24,7 @@ const actionTypes = {
   UPDATE_TOAST: "UPDATE_TOAST",
   DISMISS_TOAST: "DISMISS_TOAST",
   REMOVE_TOAST: "REMOVE_TOAST",
+  TOGGLE_PINNED: "TOGGLE_PINNED",
 } as const
 
 let count = 0
@@ -51,6 +53,10 @@ type Action =
       type: ActionType["REMOVE_TOAST"]
       toastId?: ToasterToast["id"]
     }
+  | {
+      type: ActionType["TOGGLE_PINNED"]
+      toastId: ToasterToast["id"]
+    }
 
 interface State {
   toasts: ToasterToast[]
@@ -74,6 +80,14 @@ const addToRemoveQueue = (toastId: string) => {
   toastTimeouts.set(toastId, timeout)
 }
 
+const removeFromRemoveQueue = (toastId: string) => {
+    if (toastTimeouts.has(toastId)) {
+        clearTimeout(toastTimeouts.get(toastId));
+        toastTimeouts.delete(toastId);
+    }
+}
+
+
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
@@ -93,13 +107,16 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
       if (toastId) {
-        addToRemoveQueue(toastId)
+        const toast = state.toasts.find((t) => t.id === toastId)
+        if (toast && !toast.pinned) {
+          addToRemoveQueue(toastId)
+        }
       } else {
         state.toasts.forEach((toast) => {
-          addToRemoveQueue(toast.id)
+          if (!toast.pinned) {
+            addToRemoveQueue(toast.id)
+          }
         })
       }
 
@@ -115,6 +132,25 @@ export const reducer = (state: State, action: Action): State => {
         ),
       }
     }
+    
+    case "TOGGLE_PINNED": {
+        const { toastId } = action
+        const toast = state.toasts.find((t) => t.id === toastId)
+        if (toast) {
+            if (!toast.pinned) {
+                removeFromRemoveQueue(toastId)
+            } else {
+                addToRemoveQueue(toastId)
+            }
+        }
+        return {
+            ...state,
+            toasts: state.toasts.map((t) =>
+                t.id === toastId ? { ...t, pinned: !t.pinned } : t
+            ),
+        }
+    }
+
     case "REMOVE_TOAST":
       if (action.toastId === undefined) {
         return {
@@ -188,6 +224,7 @@ function useToast() {
     ...state,
     toast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+    pin: (toastId: string) => dispatch({ type: "TOGGLE_PINNED", toastId }),
   }
 }
 
