@@ -74,28 +74,40 @@ export default async function ReportsPage() {
         task.status === 'Pending' || task.status === 'Overdue'
     );
     
-    const countsByUser = pendingAndOverdue.reduce<Record<string, { pending: number; overdue: number }>>((acc, task) => {
+    type TaskCounts = {
+        pending: Record<Task['type'], number>;
+        overdue: Record<Task['type'], number>;
+    }
+
+    const countsByUser = pendingAndOverdue.reduce<Record<string, TaskCounts>>((acc, task) => {
         const userId = task.assignedTo.id;
         if (!acc[userId]) {
-            acc[userId] = { pending: 0, overdue: 0 };
+            acc[userId] = {
+                pending: { Call: 0, Message: 0, Appointment: 0 },
+                overdue: { Call: 0, Message: 0, Appointment: 0 },
+            };
         }
         if (task.status === 'Pending') {
-            acc[userId].pending++;
+            acc[userId].pending[task.type]++;
         } else if (task.status === 'Overdue') {
-            acc[userId].overdue++;
+            acc[userId].overdue[task.type]++;
         }
         return acc;
     }, {});
     
     return Object.entries(countsByUser).map(([userId, counts]) => {
         const user = users.find(u => u.id === userId);
+        const totalPending = Object.values(counts.pending).reduce((a, b) => a + b, 0);
+        const totalOverdue = Object.values(counts.overdue).reduce((a, b) => a + b, 0);
+
         return {
             userId,
             name: user ? user.name : 'Unknown User',
             avatarUrl: user ? user.avatarUrl : '',
-            ...counts
+            counts,
+            total: totalPending + totalOverdue,
         };
-    }).sort((a,b) => (b.pending + b.overdue) - (a.pending + a.overdue)); // Sort by most tasks
+    }).sort((a,b) => b.total - a.total); // Sort by most tasks
 
   })();
 

@@ -6,6 +6,9 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { Badge } from '../ui/badge'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion'
+import { Phone, MessageSquare, Calendar } from 'lucide-react'
+import type { Task } from '@/lib/types'
 
 type ChartData = {
   source: string
@@ -30,8 +33,11 @@ type PendingTasksData = {
   userId: string;
   name: string;
   avatarUrl: string;
-  pending: number;
-  overdue: number;
+  counts: {
+    pending: Record<Task['type'], number>;
+    overdue: Record<Task['type'], number>;
+  };
+  total: number;
 }[]
 
 interface ReportsViewProps {
@@ -151,54 +157,74 @@ export function ReportsView({
         
         <Card>
             <CardHeader>
-              <CardTitle>Pending & Overdue Tasks</CardTitle>
+              <CardTitle>Pending & Overdue Task Analysis</CardTitle>
               <CardDescription>
-                A summary of outstanding tasks assigned to each user.
+                A detailed breakdown of outstanding tasks for each user. Click a user to see details.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead className="text-right">Pending</TableHead>
-                    <TableHead className="text-right">Overdue</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pendingTasksByUser.length === 0 ? (
-                      <TableRow>
-                          <TableCell colSpan={4} className="h-24 text-center">
-                              No pending tasks. Great job!
-                          </TableCell>
-                      </TableRow>
-                  ) : (
-                      pendingTasksByUser.map(userStats => (
-                      <TableRow key={userStats.userId}>
-                          <TableCell>
-                          <div className="flex items-center gap-3">
-                              <Avatar className="h-9 w-9">
-                              <AvatarImage src={userStats.avatarUrl} alt={userStats.name} data-ai-hint="person face" />
-                              <AvatarFallback>{userStats.name.charAt(0)}</AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium">{userStats.name}</span>
-                          </div>
-                          </TableCell>
-                          <TableCell className="text-right">{userStats.pending}</TableCell>
-                          <TableCell className="text-right">
-                          {userStats.overdue > 0 ? (
-                                  <Badge variant="destructive">{userStats.overdue}</Badge>
-                              ) : (
-                                  0
-                              )}
-                          </TableCell>
-                          <TableCell className="text-right font-bold text-lg">{userStats.pending + userStats.overdue}</TableCell>
-                      </TableRow>
-                      ))
-                  )}
-                </TableBody>
-              </Table>
+                {pendingTasksByUser.length === 0 ? (
+                    <div className="h-24 text-center flex items-center justify-center text-muted-foreground">
+                        No pending tasks. Great job!
+                    </div>
+                ) : (
+                    <Accordion type="single" collapsible className="w-full">
+                        {pendingTasksByUser.map((userStats) => {
+                            const totalPending = Object.values(userStats.counts.pending).reduce((a, b) => a + b, 0);
+                            const totalOverdue = Object.values(userStats.counts.overdue).reduce((a, b) => a + b, 0);
+
+                            return (
+                                <AccordionItem value={userStats.userId} key={userStats.userId}>
+                                    <AccordionTrigger className="w-full hover:no-underline p-4">
+                                        <div className="flex items-center justify-between w-full">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="h-9 w-9">
+                                                    <AvatarImage src={userStats.avatarUrl} alt={userStats.name} data-ai-hint="person face" />
+                                                    <AvatarFallback>{userStats.name.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                                <span className="font-medium">{userStats.name}</span>
+                                            </div>
+                                            <div className="flex items-center gap-4 text-sm">
+                                                <span>Pending: <span className="font-semibold">{totalPending}</span></span>
+                                                <span>Overdue: {totalOverdue > 0 ? <Badge variant="destructive">{totalOverdue}</Badge> : <span className="font-semibold">0</span>}</span>
+                                                <span className="font-bold">Total: <span className="font-semibold">{userStats.total}</span></span>
+                                            </div>
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="p-4 bg-muted/50 rounded-b-md border-t">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Status</TableHead>
+                                                    <TableHead className="text-center"><Phone className="h-4 w-4 inline mr-1" /> Calls</TableHead>
+                                                    <TableHead className="text-center"><MessageSquare className="h-4 w-4 inline mr-1" /> Messages</TableHead>
+                                                    <TableHead className="text-center"><Calendar className="h-4 w-4 inline mr-1" /> Appointments</TableHead>
+                                                    <TableHead className="text-right font-bold">Total</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                <TableRow>
+                                                    <TableCell className="font-medium">Pending</TableCell>
+                                                    <TableCell className="text-center">{userStats.counts.pending.Call}</TableCell>
+                                                    <TableCell className="text-center">{userStats.counts.pending.Message}</TableCell>
+                                                    <TableCell className="text-center">{userStats.counts.pending.Appointment}</TableCell>
+                                                    <TableCell className="text-right font-bold">{totalPending}</TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                    <TableCell className="font-medium text-destructive">Overdue</TableCell>
+                                                    <TableCell className="text-center">{userStats.counts.overdue.Call > 0 ? <Badge variant="destructive">{userStats.counts.overdue.Call}</Badge> : 0}</TableCell>
+                                                    <TableCell className="text-center">{userStats.counts.overdue.Message > 0 ? <Badge variant="destructive">{userStats.counts.overdue.Message}</Badge> : 0}</TableCell>
+                                                    <TableCell className="text-center">{userStats.counts.overdue.Appointment > 0 ? <Badge variant="destructive">{userStats.counts.overdue.Appointment}</Badge> : 0}</TableCell>
+                                                    <TableCell className="text-right font-bold">{totalOverdue > 0 ? <Badge variant="destructive">{totalOverdue}</Badge> : 0}</TableCell>
+                                                </TableRow>
+                                            </TableBody>
+                                        </Table>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            )
+                        })}
+                    </Accordion>
+                )}
             </CardContent>
         </Card>
       </div>
