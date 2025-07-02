@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -17,6 +18,14 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+  },
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      // This is needed to fix a compatibility issue between an older version of handlebars (a dependency of Genkit) and webpack.
+      handlebars: 'handlebars/dist/handlebars.js',
+    };
+    return config;
   },
 };
 
