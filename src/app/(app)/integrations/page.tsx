@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Mail, XCircle } from "lucide-react";
+import { CheckCircle, Loader2, Mail, XCircle } from "lucide-react";
 
 // Simple SVG logos for demonstration
 const ZapierLogo = () => (
@@ -31,9 +31,24 @@ const MetaLogo = () => (
     </svg>
 )
 
+const GoogleCalendarLogo = () => (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 4V2H8V4H16V2H18V4H19C20.1046 4 21 4.89543 21 6V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V6C3 4.89543 3.89543 4 5 4H6Z" fill="#4285F4"/>
+        <path d="M3 10H21V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V10Z" fill="#34A853"/>
+        <path d="M21 6V10H3V6C3 4.89543 3.89543 4 5 4H19C20.1046 4 21 4.89543 21 6Z" fill="#FBBC05"/>
+        <path d="M16 2V5H8V2H16Z" fill="#EA4335"/>
+        <path d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z" fill="#FFFFFF"/>
+    </svg>
+)
+
+const MailchimpLogo = () => (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM17.29 11.22L13.81 14.7C13.42 15.09 12.79 15.09 12.4 14.7L10.38 12.68L8.29 14.77C7.9 15.16 7.27 15.16 6.88 14.77C6.49 14.38 6.49 13.75 6.88 13.36L9.61 10.63L6.88 7.9C6.49 7.51 6.49 6.88 6.88 6.49C7.27 6.1 7.9 6.1 8.29 6.49L10.42 8.62L12.4 6.64C12.79 6.25 13.42 6.25 13.81 6.64C14.2 7.03 14.2 7.66 13.81 8.05L11.83 10.03L13.81 11.99L17.29 8.51C17.68 8.12 18.31 8.12 18.7 8.51C19.09 8.9 19.09 9.53 18.7 9.92L17.29 11.22Z" fill="#FFE01B"/>
+    </svg>
+)
 
 type Integration = {
-    id: 'zapier' | 'email' | 'whatsapp' | 'meta';
+    id: 'zapier' | 'email' | 'whatsapp' | 'meta' | 'google-calendar' | 'mailchimp';
     name: string;
     description: string;
     logo: JSX.Element;
@@ -55,11 +70,11 @@ const integrationsData: Integration[] = [
     {
         id: "email",
         name: "Email Forwarding",
-        description: "Automatically create leads from emails sent to a specific address.",
+        description: "Set up a secret forwarding address to create leads from emails.",
         logo: <Mail className="w-10 h-10 text-primary" />,
-        apiKeyLabel: "Forwarding Email Address",
-        placeholder: "leads@your-domain.leadflow.io",
-        isInput: false,
+        apiKeyLabel: "Forwarding Secret Key",
+        placeholder: "Enter your unique forwarding key",
+        isInput: true,
     },
     {
         id: "whatsapp",
@@ -73,12 +88,30 @@ const integrationsData: Integration[] = [
     {
         id: "meta",
         name: "Meta Ads (Facebook & Instagram)",
-        description: "Automatically capture leads from your Facebook & Instagram lead forms.",
+        description: "Enter your webhook token to capture leads from your Meta lead forms.",
         logo: <MetaLogo />,
-        apiKeyLabel: "Your Meta Webhook URL",
-        placeholder: "https://your-crm-instance.com/api/webhooks/meta",
-        isInput: false,
+        apiKeyLabel: "Meta API Access Token",
+        placeholder: "Enter your Meta API Access Token",
+        isInput: true,
     },
+    {
+        id: 'google-calendar',
+        name: 'Google Calendar',
+        description: 'Sync your appointments and tasks with your Google Calendar.',
+        logo: <GoogleCalendarLogo />,
+        apiKeyLabel: 'Google Calendar API Key',
+        placeholder: 'Enter your Google Calendar API Key',
+        isInput: true,
+    },
+    {
+        id: 'mailchimp',
+        name: 'Mailchimp',
+        description: 'Sync leads to your Mailchimp audiences for marketing campaigns.',
+        logo: <MailchimpLogo />,
+        apiKeyLabel: 'Mailchimp API Key',
+        placeholder: 'Enter your Mailchimp API Key',
+        isInput: true,
+    }
 ];
 
 type IntegrationState = {
@@ -92,9 +125,11 @@ export default function IntegrationsPage() {
     const { toast } = useToast();
     const [integrationState, setIntegrationState] = useState<IntegrationState>({
         zapier: { apiKey: '', connected: false },
-        email: { apiKey: 'leads@your-domain.leadflow.io', connected: true }, // Assume this is always on
+        email: { apiKey: '', connected: false },
         whatsapp: { apiKey: '', connected: false },
-        meta: { apiKey: 'https://your-crm-instance.com/api/webhooks/meta', connected: true }, // Assume this is always on
+        meta: { apiKey: '', connected: false },
+        'google-calendar': { apiKey: '', connected: false },
+        mailchimp: { apiKey: '', connected: false },
     });
     const [isLoading, setIsLoading] = useState<Partial<Record<Integration['id'], boolean>>>({});
 
@@ -102,26 +137,42 @@ export default function IntegrationsPage() {
         setIntegrationState(prev => ({ ...prev, [id]: { ...prev[id], apiKey: value }}));
     };
 
-    const handleConnectToggle = (id: Integration['id']) => {
+    const handleConnectToggle = async (id: Integration['id']) => {
         setIsLoading(prev => ({ ...prev, [id]: true }));
         
-        // Simulate API call
-        setTimeout(() => {
-            const isConnecting = !integrationState[id].connected;
-            
-            if (isConnecting && !integrationState[id].apiKey) {
-                 toast({
-                    title: "API Key Required",
-                    description: "Please enter an API key to connect.",
-                    variant: "destructive",
-                });
-                setIsLoading(prev => ({ ...prev, [id]: false }));
-                return;
-            }
+        const isConnecting = !integrationState[id].connected;
+        const apiKey = integrationState[id].apiKey;
 
+        if (isConnecting && !apiKey) {
+            toast({
+                title: "API Key Required",
+                description: "Please enter an API key to connect.",
+                variant: "destructive",
+            });
+            setIsLoading(prev => ({ ...prev, [id]: false }));
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/integrations/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    service: id,
+                    apiKey: isConnecting ? apiKey : '', // Send empty key on disconnect
+                    connect: isConnecting,
+                }),
+            });
+            
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || 'Failed to update integration status');
+            }
+            
             setIntegrationState(prev => ({
                 ...prev,
-                [id]: { ...prev[id], connected: isConnecting }
+                [id]: { ...prev[id], connected: isConnecting, apiKey: isConnecting ? apiKey : '' }
             }));
 
             toast({
@@ -129,8 +180,15 @@ export default function IntegrationsPage() {
                 description: `${integrationsData.find(i => i.id === id)?.name} has been successfully ${isConnecting ? 'connected' : 'disconnected'}.`
             });
 
+        } catch (error) {
+             toast({
+                title: "Connection Error",
+                description: (error as Error).message,
+                variant: "destructive",
+            });
+        } finally {
             setIsLoading(prev => ({ ...prev, [id]: false }));
-        }, 500);
+        }
     }
 
     return (
@@ -157,22 +215,13 @@ export default function IntegrationsPage() {
                             <CardContent className="flex-grow">
                                 <div className="space-y-2">
                                     <Label htmlFor={`api-key-${integration.name}`}>{integration.apiKeyLabel}</Label>
-                                    {integration.isInput ? (
-                                        <Input 
-                                            id={`api-key-${integration.name}`} 
-                                            placeholder={integration.placeholder} 
-                                            value={state.apiKey}
-                                            onChange={(e) => handleApiKeyChange(integration.id, e.target.value)}
-                                            disabled={state.connected || loading}
-                                        />
-                                    ) : (
-                                        <div className="flex items-center space-x-2">
-                                            <p className="text-sm font-mono p-2 bg-muted rounded-md flex-1 truncate">
-                                                {state.apiKey}
-                                            </p>
-                                            <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(state.apiKey)}>Copy</Button>
-                                        </div>
-                                    )}
+                                    <Input 
+                                        id={`api-key-${integration.name}`} 
+                                        placeholder={integration.placeholder} 
+                                        value={state.apiKey}
+                                        onChange={(e) => handleApiKeyChange(integration.id, e.target.value)}
+                                        disabled={state.connected || loading}
+                                    />
                                 </div>
                                 {state.connected && (
                                      <p className="mt-4 text-sm text-green-600 flex items-center gap-2">
@@ -182,16 +231,16 @@ export default function IntegrationsPage() {
                                 )}
                             </CardContent>
                             <CardFooter>
-                                {integration.isInput && (
-                                     <Button 
-                                        onClick={() => handleConnectToggle(integration.id)}
-                                        variant={state.connected ? "destructive" : "default"}
-                                        disabled={loading}
-                                    >
-                                        {state.connected ? <XCircle className="mr-2"/> : <CheckCircle className="mr-2" />}
-                                        {state.connected ? 'Disconnect' : 'Connect'}
-                                    </Button>
-                                )}
+                                <Button 
+                                    onClick={() => handleConnectToggle(integration.id)}
+                                    variant={state.connected ? "destructive" : "default"}
+                                    className="w-32"
+                                    disabled={loading}
+                                >
+                                    {loading ? <Loader2 className="animate-spin" /> : 
+                                    state.connected ? <><XCircle className="mr-2"/> Disconnect</> : 
+                                    <><CheckCircle className="mr-2" /> Connect</>}
+                                </Button>
                             </CardFooter>
                         </Card>
                     )
