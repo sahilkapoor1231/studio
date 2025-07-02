@@ -67,6 +67,38 @@ export default async function ReportsPage() {
 
   })();
 
+  const pendingTasksByUser = (() => {
+    if (!tasks.length || !users.length) return [];
+    
+    const pendingAndOverdue = tasks.filter(task => 
+        task.status === 'Pending' || task.status === 'Overdue'
+    );
+    
+    const countsByUser = pendingAndOverdue.reduce<Record<string, { pending: number; overdue: number }>>((acc, task) => {
+        const userId = task.assignedTo.id;
+        if (!acc[userId]) {
+            acc[userId] = { pending: 0, overdue: 0 };
+        }
+        if (task.status === 'Pending') {
+            acc[userId].pending++;
+        } else if (task.status === 'Overdue') {
+            acc[userId].overdue++;
+        }
+        return acc;
+    }, {});
+    
+    return Object.entries(countsByUser).map(([userId, counts]) => {
+        const user = users.find(u => u.id === userId);
+        return {
+            userId,
+            name: user ? user.name : 'Unknown User',
+            avatarUrl: user ? user.avatarUrl : '',
+            ...counts
+        };
+    }).sort((a,b) => (b.pending + b.overdue) - (a.pending + a.overdue)); // Sort by most tasks
+
+  })();
+
 
   return (
     <div className="space-y-6">
@@ -81,6 +113,7 @@ export default async function ReportsPage() {
         leadsBySource={leadsBySource}
         conversionByCounselor={conversionByCounselor}
         tasksCompletedToday={tasksCompletedToday}
+        pendingTasksByUser={pendingTasksByUser}
       />
     </div>
   )
