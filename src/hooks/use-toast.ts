@@ -106,31 +106,27 @@ export const reducer = (state: State, action: Action): State => {
 
     case "DISMISS_TOAST": {
       const { toastId } = action
-
-      if (toastId) {
-        const toast = state.toasts.find((t) => t.id === toastId)
-        if (toast && !toast.pinned) {
-          addToRemoveQueue(toastId)
-        }
-      } else {
-        state.toasts.forEach((toast) => {
-          if (!toast.pinned) {
-            addToRemoveQueue(toast.id)
-          }
-        })
-      }
-
       return {
         ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === toastId || toastId === undefined
-            ? {
+        toasts: state.toasts.map((t) => {
+          if (t.id === toastId || toastId === undefined) {
+            // This is a toast we might want to dismiss
+            if (t.pinned) {
+              // It's pinned, so do nothing to it.
+              return t;
+            } else {
+              // It's not pinned, so start the dismissal process.
+              addToRemoveQueue(t.id);
+              return {
                 ...t,
                 open: false,
-              }
-            : t
-        ),
-      }
+              };
+            }
+          }
+          // This is not a toast we're dismissing, so leave it as is.
+          return t;
+        }),
+      };
     }
     
     case "TOGGLE_PINNED": {

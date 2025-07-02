@@ -35,9 +35,10 @@ function NotificationScheduler() {
     const { workflows, tasks, allLeads } = useAppContext();
     const { toast } = useToast();
     const scheduledTimeouts = useRef<NodeJS.Timeout[]>([]);
+    const notifiedDueToday = useRef<Set<string>>(new Set());
 
     useEffect(() => {
-        // Always clear previous timeouts when dependencies change to prevent duplicates
+        // Clear future-scheduled reminders when dependencies change to prevent duplicates
         scheduledTimeouts.current.forEach(clearTimeout);
         scheduledTimeouts.current = [];
 
@@ -49,13 +50,16 @@ function NotificationScheduler() {
         );
         
         tasksDueToday.forEach((task, index) => {
-            const timeoutId = setTimeout(() => {
-                toast({
-                    title: 'Task Due Today',
-                    description: `Your task "${task.title}" for ${task.lead.name} is due today.`
-                });
-            }, 1000 + index * 500); // Stagger to avoid toast overload
-            scheduledTimeouts.current.push(timeoutId);
+            if (!notifiedDueToday.current.has(task.id)) {
+                const timeoutId = setTimeout(() => {
+                    toast({
+                        title: 'Task Due Today',
+                        description: `Your task "${task.title}" for ${task.lead.name} is due today.`
+                    });
+                    notifiedDueToday.current.add(task.id);
+                }, 1000 + index * 500); // Stagger to avoid toast overload
+                scheduledTimeouts.current.push(timeoutId);
+            }
         });
 
         // --- Schedule "Reminder" notifications based on workflows ---
