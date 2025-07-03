@@ -29,6 +29,7 @@ type TasksCompletedData = {
   userId: string;
   name: string;
   avatarUrl: string;
+  tasks: Task[];
   counts: Record<Task['type'], number>;
   total: number;
 }[]
@@ -169,6 +170,23 @@ export function ReportsView({
                               <AvatarFallback>{userStats.name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <span className="font-medium">{userStats.name}</span>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <div 
+                                        onClick={(e) => e.stopPropagation()} 
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.currentTarget.click() }}}
+                                        role="button"
+                                        tabIndex={0}
+                                        className="h-6 w-6 flex items-center justify-center rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                                    >
+                                        <Info className="h-4 w-4 text-muted-foreground" />
+                                        <span className="sr-only">View task details for {userStats.name}</span>
+                                    </div>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80 space-y-2 p-3">
+                                    <TaskTooltipContent tasks={userStats.tasks} title="Completed Tasks"/>
+                                </PopoverContent>
+                            </Popover>
                           </div>
                         </TableCell>
                         <TableCell className="text-right">

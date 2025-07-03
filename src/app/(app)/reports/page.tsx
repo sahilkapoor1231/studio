@@ -51,28 +51,33 @@ export default async function ReportsPage() {
         task.completedBy
     );
     
-    type TaskCounts = Record<Task['type'], number>;
+    type UserTaskStats = {
+        tasks: Task[];
+        counts: Record<Task['type'], number>;
+    };
 
-    const countsByUser = completedToday.reduce<Record<string, TaskCounts>>((acc, task) => {
+    const statsByUser = completedToday.reduce<Record<string, UserTaskStats>>((acc, task) => {
         const userId = task.completedBy!.id;
         if (!acc[userId]) {
-            acc[userId] = { Call: 0, Message: 0, Appointment: 0 };
+            acc[userId] = { tasks: [], counts: { Call: 0, Message: 0, Appointment: 0 } };
         }
-        acc[userId][task.type]++;
+        acc[userId].tasks.push(task);
+        acc[userId].counts[task.type]++;
         return acc;
     }, {});
     
-    return Object.entries(countsByUser).map(([userId, counts]) => {
+    return Object.entries(statsByUser).map(([userId, stats]) => {
         const user = users.find(u => u.id === userId);
-        const total = Object.values(counts).reduce((a, b) => a + b, 0);
+        const total = stats.tasks.length;
         return {
             userId,
             name: user ? user.name : 'Unknown User',
             avatarUrl: user ? user.avatarUrl : '',
-            counts,
+            tasks: stats.tasks,
+            counts: stats.counts,
             total
         };
-    }).sort((a,b) => b.total - a.total); // Sort by most tasks completed
+    }).sort((a,b) => b.total - a.total);
 
   })();
 
