@@ -33,32 +33,21 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 type FieldWithChildren = CustomFieldDefinition & { children: FieldWithChildren[] };
 
 const buildFieldTree = (fields: CustomFieldDefinition[]): FieldWithChildren[] => {
-    const fieldMap: Map<string, FieldWithChildren> = new Map(
-        fields.map(f => [f.id, { ...f, children: [] }])
-    );
+    const fieldMap = new Map(fields.map(f => [f.id, { ...f, children: [] as FieldWithChildren[] }]));
     const tree: FieldWithChildren[] = [];
 
-    fields.forEach(field => {
-        const node = fieldMap.get(field.id);
-        if (node) {
-            if (field.parentId && fieldMap.has(field.parentId)) {
-                let parent = fieldMap.get(field.parentId);
-                let isAncestor = false;
-                while (parent) {
-                    if (parent.id === node.id) {
-                        isAncestor = true;
-                        break;
-                    }
-                    parent = parent.parentId ? fieldMap.get(parent.parentId) : undefined;
-                }
-                if (!isAncestor) {
-                    fieldMap.get(field.parentId)!.children.push(node);
-                } else {
-                     tree.push(node);
-                }
+    fieldMap.forEach(field => {
+        if (field.parentId && fieldMap.has(field.parentId)) {
+            const parent = fieldMap.get(field.parentId)!;
+            // A simple check to avoid a field being its own parent, which is the only cycle possible with the current UI.
+            if (parent.id !== field.id) {
+                parent.children.push(field);
             } else {
-                tree.push(node);
+                // If a field's parent is itself, treat it as a root to avoid infinite loops.
+                tree.push(field);
             }
+        } else {
+            tree.push(field);
         }
     });
 

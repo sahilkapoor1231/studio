@@ -25,14 +25,14 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { WorkflowRule, WorkflowTriggerType, WorkflowAction, WorkflowCondition, WorkflowConditionField, WorkflowConditionOperator, LeadStage } from "@/lib/types"
+import type { WorkflowRule, WorkflowTriggerType, WorkflowAction, WorkflowCondition, WorkflowConditionField, WorkflowConditionOperator, LeadStage, CustomFieldDefinition } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { addWorkflow as addWorkflowToDb } from "@/lib/data"
 import { Textarea } from "@/components/ui/textarea"
 import { HelpCircle, Mail, MessageSquare, PlusCircle, Trash2, Bell } from "lucide-react"
 import { useAppContext } from "@/lib/app-context"
 
-function PlaceholderHelpDialog() {
+function PlaceholderHelpDialog({ customFields }: { customFields: CustomFieldDefinition[] }) {
     return (
          <Dialog>
             <DialogTrigger asChild>
@@ -59,6 +59,22 @@ function PlaceholderHelpDialog() {
                         <h4 className="font-semibold mb-2">Available Task Placeholders (for Notifications)</h4>
                         <ul className="list-none space-y-2 text-muted-foreground bg-muted/50 p-3 rounded-md border">
                              <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{task.title}}'}</code> - The title of the task.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold mb-2">Available Custom Field Placeholders</h4>
+                        <ul className="list-none space-y-2 text-muted-foreground bg-muted/50 p-3 rounded-md border">
+                            {customFields.length > 0 ? (
+                                customFields.map(field => (
+                                    <li key={field.id}>
+                                        <code className="text-foreground font-mono bg-background p-1 rounded">
+                                            {`{{lead.customFields.${field.id}}}`}
+                                        </code> - The value for "{field.label}".
+                                    </li>
+                                ))
+                            ) : (
+                                <li>No custom fields defined.</li>
+                            )}
                         </ul>
                     </div>
 
@@ -148,7 +164,7 @@ const leadStages: LeadStage[] = ['Initial Inquiry', 'Consultation Done', 'Proced
 export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
-  const { pipelineStages, allUsers, addWorkflow } = useAppContext();
+  const { pipelineStages, allUsers, addWorkflow, customFields } = useAppContext();
 
   const form = useForm<AddWorkflowFormValues>({
     resolver: zodResolver(formSchema),
@@ -407,7 +423,7 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                             <FormItem>
                                 <FormLabel className="flex items-center gap-2">
                                     Task Title
-                                    <PlaceholderHelpDialog />
+                                    <PlaceholderHelpDialog customFields={customFields} />
                                 </FormLabel>
                                 <FormControl><Input placeholder="e.g. Follow up with {{lead.name}}" {...field} value={field.value ?? ''} /></FormControl>
                                 <FormMessage />
@@ -425,7 +441,7 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                                 <FormItem>
                                     <FormLabel className="flex items-center gap-2">
                                         Recipient
-                                        <PlaceholderHelpDialog />
+                                        <PlaceholderHelpDialog customFields={customFields} />
                                     </FormLabel>
                                     <FormControl><Input placeholder={actionType === 'SEND_EMAIL' ? "e.g., {{lead.email}}" : "e.g., {{lead.phone}}"} {...field} value={field.value ?? ''} /></FormControl>
                                     <FormMessage />
@@ -439,7 +455,7 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                                 <FormItem>
                                     <FormLabel className="flex items-center gap-2">
                                         {actionType === 'SEND_EMAIL' ? 'Email Body' : 'Message'}
-                                        <PlaceholderHelpDialog />
+                                        <PlaceholderHelpDialog customFields={customFields} />
                                     </FormLabel>
                                     <FormControl>
                                         <Textarea placeholder="e.g., Hi {{lead.name}}, confirming your appointment." {...field} value={field.value ?? ''}/>
@@ -474,7 +490,7 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                                 <FormItem>
                                     <FormLabel className="flex items-center gap-2">
                                         Notification Message
-                                        <PlaceholderHelpDialog />
+                                        <PlaceholderHelpDialog customFields={customFields} />
                                     </FormLabel>
                                     <FormControl>
                                         <Textarea placeholder="e.g., Reminder: {{task.title}} for {{lead.name}} is due soon." {...field} value={field.value ?? ''}/>
@@ -494,7 +510,7 @@ export function AddWorkflowDialog({ children }: { children: React.ReactNode }) {
                             <FormItem>
                                 <FormLabel className="flex items-center gap-2">
                                     Note Content
-                                    <PlaceholderHelpDialog />
+                                    <PlaceholderHelpDialog customFields={customFields} />
                                 </FormLabel>
                                 <FormControl>
                                   <Textarea 

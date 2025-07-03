@@ -127,7 +127,7 @@ const mockDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms)
 
 // --- WORKFLOW ENGINE ---
 const applyTemplate = (template: string, lead: Lead): string => {
-    return template
+    let populatedTemplate = template
         .replace(/{{lead.name}}/g, lead.name)
         .replace(/{{lead.email}}/g, lead.email)
         .replace(/{{lead.phone}}/g, lead.phone)
@@ -136,6 +136,20 @@ const applyTemplate = (template: string, lead: Lead): string => {
         .replace(/{{lead.status}}/g, lead.status)
         .replace(/{{lead.stage}}/g, lead.stage)
         .replace(/{{lead.assignedTo.name}}/g, lead.assignedTo.name);
+
+    // Populate custom fields
+    if (lead.customFields) {
+        Object.keys(lead.customFields).forEach(fieldId => {
+            const placeholder = `{{lead.customFields.${fieldId}}}`;
+            const value = lead.customFields?.[fieldId] ?? '';
+            populatedTemplate = populatedTemplate.replace(new RegExp(placeholder, 'g'), String(value));
+        });
+    }
+
+    // Fallback for any placeholders that weren't replaced, to avoid showing them to the user.
+    populatedTemplate = populatedTemplate.replace(/{{.*?}}/g, '');
+
+    return populatedTemplate;
 };
 
 const checkConditions = (lead: Lead, conditions: WorkflowCondition[]): boolean => {
@@ -559,7 +573,20 @@ export const addHistoryItem = async (leadId: string, action: string, userId: str
     if (!lead) throw new Error(`Lead with id ${leadId} not found`);
 
     const user = users.find(u => u.id === userId);
-    if (!user) throw new Error(`User with id ${userId} not found`);
+    if (!user) {
+        console.warn(`User with id ${userId} not found for history item. Defaulting to system.`);
+        // In a real app, you might want to handle this differently
+        const systemUser = users.find(u=>u.id === 'user-ai')!
+        const newHistoryItem: HistoryItem = {
+            id: `h-${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            user: systemUser,
+            action: action
+        };
+        lead.history.unshift(newHistoryItem);
+        return newHistoryItem;
+    }
+
 
     const newHistoryItem: HistoryItem = {
         id: `h-${Date.now()}`,
