@@ -112,6 +112,27 @@ const CustomFieldItem = ({ field, level = 0, onFieldDelete }: { field: FieldWith
     )
 }
 
+const renderCondition = (condition: WorkflowCondition) => {
+    const fieldMap: Record<string, string> = {
+        source: 'Source',
+        inquiryType: 'Inquiry Type',
+        status: 'Status',
+        stage: 'Stage',
+    }
+    const operatorMap: Record<string, string> = {
+        EQUALS: 'equals',
+        NOT_EQUALS: 'does not equal'
+    }
+    return (
+        <div key={condition.id} className="text-xs space-x-1">
+            <span>If</span>
+            <Badge variant="outline">{fieldMap[condition.field]}</Badge>
+            <span>{operatorMap[condition.operator]}</span>
+            <Badge variant="secondary">{condition.value}</Badge>
+        </div>
+    )
+}
+
 export function SettingsView() {
     const {
         customFields,
@@ -196,27 +217,6 @@ export function SettingsView() {
             return allUsers.find(u => u.id === action.value)?.name || action.value;
         }
         return action.value;
-    }
-
-    const renderCondition = (condition: WorkflowCondition) => {
-        const fieldMap: Record<string, string> = {
-            source: 'Source',
-            inquiryType: 'Inquiry Type',
-            status: 'Status',
-            stage: 'Stage',
-        }
-        const operatorMap: Record<string, string> = {
-            EQUALS: 'equals',
-            NOT_EQUALS: 'does not equal'
-        }
-        return (
-            <div key={condition.id} className="text-xs space-x-1">
-                <span>If</span>
-                <Badge variant="outline">{fieldMap[condition.field]}</Badge>
-                <span>{operatorMap[condition.operator]}</span>
-                <Badge variant="secondary">{condition.value}</Badge>
-            </div>
-        )
     }
 
     const renderActionDetails = (action: WorkflowAction) => {
@@ -536,7 +536,7 @@ export function SettingsView() {
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
                             <CardTitle>Round Robin Assignment</CardTitle>
-                            <CardDescription>Automatically distribute new leads from a source to multiple users.</CardDescription>
+                            <CardDescription>Automatically distribute new leads based on source, conditions, and weights.</CardDescription>
                         </div>
                         <AddRoundRobinRuleDialog>
                              <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Rule</Button>
@@ -549,9 +549,15 @@ export function SettingsView() {
                             ) : (
                                 roundRobinRules.map((rule, index) => (
                                     <div key={rule.id} className={`flex items-center justify-between p-4 ${index < roundRobinRules.length - 1 ? 'border-b' : ''}`}>
-                                        <div>
+                                        <div className="space-y-2">
                                             <p className="font-medium">{rule.name}</p>
                                             <p className="text-sm text-muted-foreground">Source: <Badge variant="secondary">{rule.source}</Badge></p>
+                                             {rule.conditions && rule.conditions.length > 0 && (
+                                                <div className="flex items-center flex-wrap gap-2">
+                                                     <p className="text-sm text-muted-foreground">Conditions:</p>
+                                                    {rule.conditions.map(renderCondition)}
+                                                </div>
+                                             )}
                                             <div className="flex items-center gap-2 mt-2">
                                                 <span className="text-sm text-muted-foreground">Users:</span>
                                                  <div className="flex items-center gap-4">

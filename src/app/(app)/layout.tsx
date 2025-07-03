@@ -9,6 +9,7 @@ import { useEffect, useState, useRef } from "react"
 import type { User, PipelineStage, CustomFieldDefinition, WorkflowRule, RoundRobinRule, Task, Lead, SendNotificationAction, WorkflowCondition } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { isToday, parseISO } from "date-fns"
+import Link from "next/link"
 
 type InitialData = {
     allUsers: User[];
@@ -38,11 +39,11 @@ function NotificationScheduler() {
     const notifiedDueToday = useRef<Set<string>>(new Set());
 
     useEffect(() => {
-        // Clear future-scheduled reminders when dependencies change to prevent duplicates
+        // Clear all previous timeouts when dependencies change to ensure we reschedule everything correctly
         scheduledTimeouts.current.forEach(clearTimeout);
         scheduledTimeouts.current = [];
 
-        if (!tasks) return;
+        if (!tasks || !workflows || !allLeads) return;
 
         // --- Schedule "Due Today" notifications ---
         const tasksDueToday = tasks.filter(task => 
@@ -54,7 +55,11 @@ function NotificationScheduler() {
                 const timeoutId = setTimeout(() => {
                     toast({
                         title: 'Task Due Today',
-                        description: `Your task "${task.title}" for ${task.lead.name} is due today.`
+                        description: (
+                            <span>
+                                Your task "{task.title}" for <Link href={`/leads/${task.lead.id}`} className="font-bold text-primary hover:underline">{task.lead.name}</Link> is due today.
+                            </span>
+                        )
                     });
                     notifiedDueToday.current.add(task.id);
                 }, 1000 + index * 500); // Stagger to avoid toast overload
@@ -63,8 +68,6 @@ function NotificationScheduler() {
         });
 
         // --- Schedule "Reminder" notifications based on workflows ---
-        if (!workflows || !allLeads) return;
-
         const reminderWorkflows = workflows.filter(
             (w): w is WorkflowRule & { action: SendNotificationAction } => 
                 w.status === 'active' && 
@@ -95,14 +98,22 @@ function NotificationScheduler() {
 
                     if (delay > 0) {
                         const timeoutId = setTimeout(() => {
-                            const message = action.template
+                            const messageParts = action.template
                                 .replace(/{{task.title}}/g, task.title)
-                                .replace(/{{lead.name}}/g, lead.name)
-                                .replace(/{{lead.assignedTo.name}}/g, lead.assignedTo.name);
-                            
+                                .replace(/{{lead.assignedTo.name}}/g, lead.assignedTo.name)
+                                .split('{{lead.name}}');
+
                             toast({
                                 title: 'Task Reminder',
-                                description: message,
+                                description: (
+                                    <span>
+                                        {messageParts[0]}
+                                        {messageParts.length > 1 && (
+                                            <Link href={`/leads/${task.lead.id}`} className="font-bold text-primary hover:underline">{lead.name}</Link>
+                                        )}
+                                        {messageParts[1]}
+                                    </span>
+                                ),
                             });
                         }, delay);
                         scheduledTimeouts.current.push(timeoutId);
