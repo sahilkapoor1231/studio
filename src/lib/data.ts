@@ -1,7 +1,7 @@
 'use server'
 
 import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType, WorkflowAction, AddNoteAction, AddTagAction, CreateTaskAction, UpdateLeadFieldAction, WorkflowCondition, UserRole, RoundRobinRule, LeadSource, RoundRobinAssignment, IntegrationSetting } from './types';
-import { subDays, formatISO, addDays } from 'date-fns';
+import { subDays, formatISO, addDays, parseISO } from 'date-fns';
 import { randomBytes } from 'crypto';
 
 // This avoids issues with hot-reloading wiping out our data in development
@@ -751,4 +751,21 @@ export const deleteIntegrationSetting = async (userId: string, service: Integrat
         return { success: true };
     }
     return { success: false };
+}
+
+// --- REAL-TIME CHECKER ---
+export const checkAndOverdueTasks = async (): Promise<Task[]> => {
+    const now = new Date();
+    const newlyOverdue: Task[] = [];
+    tasks.forEach(task => {
+        if (task.status === 'Pending' && parseISO(task.dueDate) < now) {
+            task.status = 'Overdue';
+            newlyOverdue.push({ ...task });
+            addHistoryItem(task.lead.id, `Task "${task.title}" is now overdue.`, 'user-ai');
+        }
+    });
+    if (newlyOverdue.length > 0) {
+        await mockDelay(50); // simulate db write
+    }
+    return newlyOverdue;
 }

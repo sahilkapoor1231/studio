@@ -3,7 +3,7 @@
 import { Sidebar, SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AppHeader } from "@/components/app-header"
-import { getCustomFields, getPipelineStages, getUsers, getWorkflows, getRoundRobinRules, getTasks, getLeads } from "@/lib/data"
+import { checkAndOverdueTasks, getCustomFields, getPipelineStages, getUsers, getWorkflows, getRoundRobinRules, getTasks, getLeads } from "@/lib/data"
 import { AppContextProvider, useAppContext } from "@/lib/app-context"
 import { useEffect, useState, useRef } from "react"
 import type { User, PipelineStage, CustomFieldDefinition, WorkflowRule, RoundRobinRule, Task, Lead, SendNotificationAction, WorkflowCondition } from "@/lib/types"
@@ -39,13 +39,11 @@ function NotificationScheduler() {
     const notifiedDueToday = useRef<Set<string>>(new Set());
 
     useEffect(() => {
-        // Clear all previous timeouts when dependencies change to ensure we reschedule everything correctly
         scheduledTimeouts.current.forEach(clearTimeout);
         scheduledTimeouts.current = [];
 
         if (!tasks || !workflows || !allLeads) return;
-
-        // --- Schedule "Due Today" notifications ---
+        
         const tasksDueToday = tasks.filter(task => 
             task.status === 'Pending' && isToday(parseISO(task.dueDate))
         );
@@ -62,12 +60,11 @@ function NotificationScheduler() {
                         )
                     });
                     notifiedDueToday.current.add(task.id);
-                }, 1000 + index * 500); // Stagger to avoid toast overload
+                }, 1000 + index * 500);
                 scheduledTimeouts.current.push(timeoutId);
             }
         });
 
-        // --- Schedule "Reminder" notifications based on workflows ---
         const reminderWorkflows = workflows.filter(
             (w): w is WorkflowRule & { action: SendNotificationAction } => 
                 w.status === 'active' && 
@@ -91,7 +88,7 @@ function NotificationScheduler() {
                     const action = workflow.action;
                     const dueDate = parseISO(task.dueDate);
                     
-                    if (dueDate < new Date()) return; // Don't schedule for past tasks
+                    if (dueDate < new Date()) return;
                     
                     const notificationTime = new Date(dueDate.getTime() - action.minutesBefore * 60000);
                     const delay = notificationTime.getTime() - Date.now();
@@ -122,11 +119,43 @@ function NotificationScheduler() {
             });
         });
 
-        // Cleanup function to clear all timeouts when the component unmounts or effect re-runs
         return () => {
             scheduledTimeouts.current.forEach(clearTimeout);
         };
     }, [workflows, tasks, allLeads, toast]);
+
+    return null;
+}
+
+function TaskStatusWatcher() {
+    const { updateTask } = useAppContext();
+    const { toast } = useToast();
+
+    useEffect(() => {
+        const intervalId = setInterval(async () => {
+            const newlyOverdueTasks = await checkAndOverdueTasks();
+            
+            if (newlyOverdueTasks && newlyOverdueTasks.length > 0) {
+                newlyOverdueTasks.forEach(task => {
+                    updateTask(task);
+                    
+                    toast({
+                        title: 'Task Overdue',
+                        variant: 'destructive',
+                        description: (
+                            <span>
+                                Task "{task.title}" for <Link href={`/leads/${task.lead.id}`} className="font-bold text-primary hover:underline">{task.lead.name}</Link> is now overdue.
+                            </span>
+                        ),
+                    });
+                });
+
+                window.dispatchEvent(new CustomEvent('notifications-updated'));
+            }
+        }, 60000); // Check every minute
+
+        return () => clearInterval(intervalId);
+    }, [updateTask, toast]);
 
     return null;
 }
@@ -162,7 +191,6 @@ export default function AppLayout({
   }, []);
 
   if (isLoading || !initialData) {
-    // You can render a loading skeleton for the entire layout here
     return (
         <div className="flex min-h-svh w-full">
             <div className="hidden md:block w-16 bg-muted/40 animate-pulse"></div>
@@ -177,6 +205,7 @@ export default function AppLayout({
   return (
     <AppContextProvider initialData={initialData}>
       <NotificationScheduler />
+      <TaskStatusWatcher />
       <SidebarProvider>
         <Sidebar>
           <AppSidebar />
