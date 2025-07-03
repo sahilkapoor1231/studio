@@ -231,10 +231,16 @@ export function ReportsView({
                                                 <span className="font-medium">{userStats.name}</span>
                                                 <Popover>
                                                     <PopoverTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}>
+                                                        <div 
+                                                            onClick={(e) => e.stopPropagation()} 
+                                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.currentTarget.click() }}}
+                                                            role="button"
+                                                            tabIndex={0}
+                                                            className="h-6 w-6 flex items-center justify-center rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                                                        >
                                                             <Info className="h-4 w-4 text-muted-foreground" />
                                                             <span className="sr-only">View task details for {userStats.name}</span>
-                                                        </Button>
+                                                        </div>
                                                     </PopoverTrigger>
                                                     <PopoverContent className="w-80 space-y-2 p-3">
                                                         <TaskTooltipContent tasks={userStats.pendingTasks} title="Pending Tasks"/>
