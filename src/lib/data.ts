@@ -2,7 +2,7 @@
 'use server'
 
 import { User, Lead, Task, Note, NewLeadPayload, CustomFieldDefinition, PipelineStage, WorkflowRule, HistoryItem, WorkflowTriggerType, WorkflowAction, AddNoteAction, AddTagAction, CreateTaskAction, UpdateLeadFieldAction, WorkflowCondition, UserRole, RoundRobinRule, LeadSource, RoundRobinAssignment, IntegrationSetting } from './types';
-import { subDays, formatISO, addDays, parseISO } from 'date-fns';
+import { subDays, formatISO, addDays, parseISO, format } from 'date-fns';
 import { randomBytes } from 'crypto';
 
 // This avoids issues with hot-reloading wiping out our data in development
@@ -135,7 +135,8 @@ const applyTemplate = (template: string, lead: Lead): string => {
         .replace(/{{lead.inquiryType}}/g, lead.inquiryType)
         .replace(/{{lead.status}}/g, lead.status)
         .replace(/{{lead.stage}}/g, lead.stage)
-        .replace(/{{lead.assignedTo.name}}/g, lead.assignedTo.name);
+        .replace(/{{lead.assignedTo.name}}/g, lead.assignedTo.name)
+        .replace(/{{lead.lastContacted}}/g, format(parseISO(lead.lastContacted), 'PP'));
 
     // Populate custom fields
     if (lead.customFields) {

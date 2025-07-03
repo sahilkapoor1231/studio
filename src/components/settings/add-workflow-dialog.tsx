@@ -52,6 +52,11 @@ function PlaceholderHelpDialog({ customFields }: { customFields: CustomFieldDefi
                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.name}}'}</code> - The full name of the lead.</li>
                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.email}}'}</code> - The lead's email address.</li>
                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.phone}}'}</code> - The lead's phone number.</li>
+                            <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.source}}'}</code> - The source of the lead.</li>
+                            <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.status}}'}</code> - The current status of the lead.</li>
+                            <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.stage}}'}</code> - The current stage of the lead.</li>
+                            <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.inquiryType}}'}</code> - The inquiry type for the lead.</li>
+                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.lastContacted}}'}</code> - The date the lead was last contacted.</li>
                             <li><code className="text-foreground font-mono bg-background p-1 rounded">{'{{lead.assignedTo.name}}'}</code> - Name of the assigned team member.</li>
                         </ul>
                     </div>
