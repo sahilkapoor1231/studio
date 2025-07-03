@@ -226,8 +226,8 @@ export function ReportsView({
 
                             return (
                                 <AccordionItem value={userStats.userId} key={userStats.userId}>
-                                    <AccordionTrigger asChild>
-                                        <div className="flex items-center justify-between w-full hover:bg-muted/50 p-4 cursor-pointer rounded-md">
+                                    <AccordionTrigger className="w-full hover:bg-muted/50 p-4 data-[state=closed]:rounded-b-md data-[state=open]:rounded-b-none no-underline">
+                                        <div className="flex items-center justify-between w-full">
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-9 w-9">
                                                     <AvatarImage src={userStats.avatarUrl} alt={userStats.name} data-ai-hint="person face" />
