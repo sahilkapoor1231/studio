@@ -11,7 +11,7 @@ import { Phone, MessageSquare, Calendar, Info } from 'lucide-react'
 import type { Task } from '@/lib/types'
 import { format, parseISO } from 'date-fns'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Button } from '../ui/button'
+import Link from 'next/link'
 
 type ChartData = {
   source: string
@@ -54,14 +54,19 @@ const TaskTooltipContent = ({ tasks, title }: { tasks: Task[], title: string }) 
     return (
         <div>
             <h4 className="font-semibold mb-1 text-sm">{title} ({tasks.length})</h4>
-            <ul className="list-none space-y-1 text-xs">
+            <ul className="list-none space-y-2 text-xs">
                 {tasks.slice(0, 5).map(task => (
-                    <li key={task.id} className="flex justify-between gap-4">
-                        <span className="truncate">{task.title}</span>
-                        <span className="text-muted-foreground shrink-0">{format(parseISO(task.dueDate), 'P')}</span>
+                    <li key={task.id} className="border-t border-muted/50 pt-2 first:pt-0 first:border-0">
+                        <div className="flex justify-between w-full">
+                            <span className="truncate font-medium">{task.title}</span>
+                            <span className="text-muted-foreground shrink-0 pl-2">{format(parseISO(task.dueDate), 'P')}</span>
+                        </div>
+                        <span className="text-muted-foreground">
+                            for <Link href={`/leads/${task.lead.id}`} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>{task.lead.name}</Link>
+                        </span>
                     </li>
                 ))}
-                {tasks.length > 5 && <li className="text-muted-foreground">...and {tasks.length - 5} more</li>}
+                {tasks.length > 5 && <li className="text-muted-foreground pt-2 border-t border-muted/50">...and {tasks.length - 5} more</li>}
             </ul>
         </div>
     )
@@ -221,8 +226,8 @@ export function ReportsView({
 
                             return (
                                 <AccordionItem value={userStats.userId} key={userStats.userId}>
-                                    <AccordionTrigger className="w-full hover:no-underline p-4">
-                                        <div className="flex items-center justify-between w-full">
+                                    <AccordionTrigger asChild>
+                                        <div className="flex items-center justify-between w-full hover:bg-muted/50 p-4 cursor-pointer rounded-md">
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-9 w-9">
                                                     <AvatarImage src={userStats.avatarUrl} alt={userStats.name} data-ai-hint="person face" />
