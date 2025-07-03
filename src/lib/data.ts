@@ -78,6 +78,7 @@ const initialRoundRobinRules: RoundRobinRule[] = [
             { userId: 'user-4', weight: 1 }, // Sam Taylor
         ],
         lastAssignedIndex: -1,
+        conditions: [],
     }
 ];
 
@@ -254,8 +255,24 @@ export const getLeadById = async (id: string): Promise<Lead | undefined> => {
 };
 
 export const addLead = async (leadData: NewLeadPayload): Promise<Lead> => {
-    // Check for a round robin rule for the lead's source
-    const rule = roundRobinRules.find(r => r.source === leadData.source);
+    const tempLeadForCheck: Lead = {
+        ...leadData,
+        id: 'temp-id',
+        photoUrl: '',
+        assignedTo: users.find(u => u.id === leadData.assignedToId)!,
+        lastContacted: new Date().toISOString(),
+        tags: [],
+        history: [],
+        notes: [],
+        documents: [],
+    };
+
+    // Find the first rule that matches the source and conditions
+    const rule = roundRobinRules.find(r => 
+        r.source === leadData.source && 
+        checkConditions(tempLeadForCheck, r.conditions || [])
+    );
+    
     let assignedToId = leadData.assignedToId;
     let isAutoAssigned = false;
 
@@ -263,7 +280,6 @@ export const addLead = async (leadData: NewLeadPayload): Promise<Lead> => {
         // Rule exists, override assignment with weighted round robin logic.
         isAutoAssigned = true;
 
-        // 1. Create an expanded queue based on weights
         const assignmentQueue: string[] = [];
         rule.assignments.forEach(assignment => {
             for (let i = 0; i < assignment.weight; i++) {
@@ -272,27 +288,22 @@ export const addLead = async (leadData: NewLeadPayload): Promise<Lead> => {
         });
 
         if (assignmentQueue.length > 0) {
-            // 2. Get the next user from the queue
             const nextIndex = (rule.lastAssignedIndex + 1) % assignmentQueue.length;
             assignedToId = assignmentQueue[nextIndex];
-            
-            // 3. "Save" the updated index to the in-memory rule object
             rule.lastAssignedIndex = nextIndex;
         } else {
-            // No valid assignments in the rule, fallback to original
             isAutoAssigned = false;
         }
     }
 
     const assignedUser = users.find(u => u.id === assignedToId);
     if (!assignedUser) {
-        // Fallback if the assigned user is not found for some reason
         throw new Error(`Assigned user with ID ${assignedToId} not found`);
     }
 
     const newLead: Lead = {
         id: `lead-${Date.now()}`, name: leadData.name, email: leadData.email, phone: leadData.phone, source: leadData.source, assignedTo: assignedUser, status: leadData.status, inquiryType: leadData.inquiryType, stage: leadData.stage, customFields: leadData.customFields, photoUrl: `https://placehold.co/100x100.png`, lastContacted: new Date().toISOString(), tags: [],
-        history: [ { id: `h-${Date.now()}`, timestamp: new Date().toISOString(), user: assignedUser, action: isAutoAssigned ? `Lead created and auto-assigned to ${assignedUser.name} via Round Robin.` : 'Lead created.' } ],
+        history: [ { id: `h-${Date.now()}`, timestamp: new Date().toISOString(), user: assignedUser, action: isAutoAssigned ? `Lead created and auto-assigned to ${assignedUser.name} via rule "${rule?.name}".` : 'Lead created.' } ],
         notes: [], documents: [],
     };
 
@@ -343,6 +354,7 @@ export const updateLeadAssignment = async (leadId: string, newUserId: string): P
     lead.assignedTo = user;
     await addHistoryItem(lead.id, `Lead reassigned to ${user.name}`, 'user-2'); // Assume current user is user-2
     await mockDelay(100);
+    await runWorkflows('LEAD_ASSIGNED', lead, 'user-2');
     return lead;
 }
 
@@ -358,6 +370,7 @@ export const bulkUpdateLeadAssignment = async (leadIds: string[], newUserId: str
         if (lead) {
             lead.assignedTo = user;
             await addHistoryItem(leadId, `Lead reassigned to ${user.name} via bulk action.`, actorId);
+            await runWorkflows('LEAD_ASSIGNED', lead, actorId);
         }
     }
     return { success: true };
@@ -395,6 +408,24 @@ export const restoreAndReassignLead = async (leadId: string, newUserId: string):
     await addHistoryItem(lead.id, `Lead restored and reassigned to ${user.name}`, 'user-2'); // Assume current user is user-2
     await mockDelay(100);
     return { ...lead };
+}
+
+export const bulkRestoreAndReassignLeads = async (leadIds: string[], newUserId: string): Promise<{ success: boolean }> => {
+    await mockDelay(500);
+    const user = users.find(u => u.id === newUserId);
+    if (!user) throw new Error("User not found");
+
+    for (const leadId of leadIds) {
+        const lead = leads.find(l => l.id === leadId);
+        if (lead && lead.deletedAt) {
+            delete lead.deletedAt;
+            delete lead.deletedBy;
+            lead.assignedTo = user;
+            lead.status = 'New';
+            await addHistoryItem(leadId, `Lead restored and reassigned to ${user.name} via bulk action.`, 'user-2'); // Assume current user
+        }
+    }
+    return { success: true };
 }
 
 
@@ -440,10 +471,10 @@ export const addTask = async (taskData: Omit<Task, 'id' | 'status' | 'completedA
     tasks.unshift(newTask);
     await mockDelay(100);
     
-    // Add history item to the lead
     const lead = leads.find(l => l.id === taskData.lead.id);
     if (lead) {
         await addHistoryItem(lead.id, `Task created: "${taskData.title}"`, 'user-2'); // Assume current user
+        await runWorkflows('TASK_CREATED', lead, 'user-2');
     }
 
     return newTask;
@@ -639,11 +670,6 @@ export const getRoundRobinRules = async (): Promise<RoundRobinRule[]> => {
 }
 
 export const addRoundRobinRule = async (ruleData: Omit<RoundRobinRule, 'id' | 'lastAssignedIndex'>): Promise<RoundRobinRule> => {
-    // Ensure a source is only used once for a rule
-    if (roundRobinRules.some(r => r.source === ruleData.source)) {
-        throw new Error(`A rule for the source "${ruleData.source}" already exists.`);
-    }
-    
     if (!ruleData.assignments || ruleData.assignments.length === 0) {
         throw new Error("A rule must have at least one user assigned.");
     }
@@ -651,7 +677,7 @@ export const addRoundRobinRule = async (ruleData: Omit<RoundRobinRule, 'id' | 'l
     const newRule: RoundRobinRule = {
         ...ruleData,
         id: `rr-${Date.now()}`,
-        lastAssignedIndex: -1, // Always start fresh
+        lastAssignedIndex: -1,
     };
 
     roundRobinRules.push(newRule);

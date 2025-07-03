@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -24,11 +24,11 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { restoreAndReassignLead } from "@/lib/data"
-import type { Lead } from "@/lib/types"
+import { bulkRestoreAndReassignLeads } from "@/lib/data"
 import { useToast } from "@/hooks/use-toast"
 import { useAppContext } from "@/lib/app-context"
 import { useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react"
 
 const formSchema = z.object({
   assignedToId: z.string({ required_error: "Please select a team member." }),
@@ -36,44 +36,46 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function RestoreReassignDialog({ children, lead, onLeadRestored }: { children: React.ReactNode, lead: Lead, onLeadRestored: (leadId: string) => void }) {
+export function BulkRestoreDialog({
+    children,
+    leadIds,
+    onComplete
+}: {
+    children: React.ReactNode
+    leadIds: string[]
+    onComplete: () => void
+}) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast()
-  const { assignableUsers } = useAppContext();
   const router = useRouter();
+  const { assignableUsers } = useAppContext();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      assignedToId: lead.assignedTo.id,
+        assignedToId: undefined,
     },
   })
-
-  useEffect(() => {
-    if (open) {
-      form.reset({ assignedToId: assignableUsers[0]?.id })
-    }
-  }, [open, form, assignableUsers])
 
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
     try {
-        await restoreAndReassignLead(lead.id, values.assignedToId);
+        await bulkRestoreAndReassignLeads(leadIds, values.assignedToId);
         const assignedUser = assignableUsers.find(u => u.id === values.assignedToId);
         
-        onLeadRestored(lead.id);
         toast({
-            title: "Lead Restored",
-            description: `${lead.name} has been restored and assigned to ${assignedUser?.name}.`,
+            title: "Leads Restored",
+            description: `${leadIds.length} leads have been restored and reassigned to ${assignedUser?.name}.`,
         })
+        onComplete();
         setOpen(false)
-        router.refresh()
+        router.refresh();
     } catch (error) {
-        console.error("Failed to restore lead:", error);
+        console.error("Failed to bulk restore leads:", error);
         toast({
             title: "Error",
-            description: "Could not restore lead. Please try again.",
+            description: "Could not restore leads. Please try again.",
             variant: "destructive"
         });
     } finally {
@@ -86,40 +88,41 @@ export function RestoreReassignDialog({ children, lead, onLeadRestored }: { chil
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Restore & Reassign Lead</DialogTitle>
+          <DialogTitle>Bulk Restore & Reassign</DialogTitle>
           <DialogDescription>
-            This will restore "{lead.name}" to the active leads list and reassign it.
+            Restore {leadIds.length} selected leads and assign them to a team member.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                    control={form.control}
-                    name="assignedToId"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Assign To</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a team member" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {assignableUsers.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+            <FormField
+                control={form.control}
+                name="assignedToId"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Assign To</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a team member" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {assignableUsers.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
             
             <DialogFooter>
                 <DialogClose asChild>
                     <Button type="button" variant="secondary">Cancel</Button>
                 </DialogClose>
                 <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? 'Restoring...' : 'Restore & Reassign'}
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSubmitting ? 'Restoring...' : 'Restore Leads'}
                 </Button>
             </DialogFooter>
           </form>
