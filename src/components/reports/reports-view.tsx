@@ -7,10 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { Badge } from '../ui/badge'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion'
-import { Phone, MessageSquare, Calendar } from 'lucide-react'
+import { Phone, MessageSquare, Calendar, Info } from 'lucide-react'
 import type { Task } from '@/lib/types'
-import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { format, parseISO } from 'date-fns'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '../ui/button'
 
 type ChartData = {
   source: string
@@ -196,7 +197,7 @@ export function ReportsView({
             <CardHeader>
               <CardTitle>Pending & Overdue Task Analysis</CardTitle>
               <CardDescription>
-                A detailed breakdown of outstanding tasks. Hover for details, click to expand.
+                A detailed breakdown of outstanding tasks. Click a row to expand.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -220,33 +221,34 @@ export function ReportsView({
 
                             return (
                                 <AccordionItem value={userStats.userId} key={userStats.userId}>
-                                    <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <AccordionTrigger className="w-full hover:no-underline p-4">
-                                                    <div className="flex items-center justify-between w-full">
-                                                        <div className="flex items-center gap-3">
-                                                            <Avatar className="h-9 w-9">
-                                                                <AvatarImage src={userStats.avatarUrl} alt={userStats.name} data-ai-hint="person face" />
-                                                                <AvatarFallback>{userStats.name.charAt(0)}</AvatarFallback>
-                                                            </Avatar>
-                                                            <span className="font-medium">{userStats.name}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-4 text-sm">
-                                                            <span>Pending: <span className="font-semibold">{totalPending}</span></span>
-                                                            <span>Overdue: {totalOverdue > 0 ? <Badge variant="destructive">{totalOverdue}</Badge> : <span className="font-semibold">0</span>}</span>
-                                                            <span className="font-bold">Total: <span className="font-semibold">{userStats.total}</span></span>
-                                                        </div>
-                                                    </div>
-                                                </AccordionTrigger>
-                                            </TooltipTrigger>
-                                            <TooltipContent className="w-80 space-y-2 p-3">
-                                                <TaskTooltipContent tasks={userStats.pendingTasks} title="Pending Tasks"/>
-                                                {userStats.overdueTasks.length > 0 && <TaskTooltipContent tasks={userStats.overdueTasks} title="Overdue Tasks"/>}
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
-
+                                    <AccordionTrigger className="w-full hover:no-underline p-4">
+                                        <div className="flex items-center justify-between w-full">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="h-9 w-9">
+                                                    <AvatarImage src={userStats.avatarUrl} alt={userStats.name} data-ai-hint="person face" />
+                                                    <AvatarFallback>{userStats.name.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                                <span className="font-medium">{userStats.name}</span>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}>
+                                                            <Info className="h-4 w-4 text-muted-foreground" />
+                                                            <span className="sr-only">View task details for {userStats.name}</span>
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-80 space-y-2 p-3">
+                                                        <TaskTooltipContent tasks={userStats.pendingTasks} title="Pending Tasks"/>
+                                                        {userStats.overdueTasks.length > 0 && <TaskTooltipContent tasks={userStats.overdueTasks} title="Overdue Tasks"/>}
+                                                    </PopoverContent>
+                                                </Popover>
+                                            </div>
+                                            <div className="flex items-center gap-4 text-sm">
+                                                <span>Pending: <span className="font-semibold">{totalPending}</span></span>
+                                                <span>Overdue: {totalOverdue > 0 ? <Badge variant="destructive">{totalOverdue}</Badge> : <span className="font-semibold">0</span>}</span>
+                                                <span className="font-bold">Total: <span className="font-semibold">{userStats.total}</span></span>
+                                            </div>
+                                        </div>
+                                    </AccordionTrigger>
                                     <AccordionContent className="p-4 bg-muted/50 rounded-b-md border-t">
                                         <Table>
                                             <TableHeader>
