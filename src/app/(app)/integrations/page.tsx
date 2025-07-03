@@ -125,8 +125,8 @@ const integrationsData: Integration[] = [
     },
      {
         id: "meta",
-        name: "Meta Ads (Facebook & Instagram)",
-        description: "Connect your account to capture leads from your Meta lead forms. This uses a secure OAuth flow where you grant permission to this app.",
+        name: "Meta Ads",
+        description: "Connect your account to capture leads from your Facebook & Instagram lead forms. This uses a secure OAuth flow where you grant permission to this app.",
         logo: <MetaLogo />,
     },
     {
@@ -137,8 +137,8 @@ const integrationsData: Integration[] = [
     },
     {
         id: 'linkedin',
-        name: 'LinkedIn Lead Gen Forms',
-        description: "Connect your LinkedIn account to automatically capture leads from your B2B ad campaigns using a secure OAuth flow.",
+        name: 'LinkedIn',
+        description: "Connect your LinkedIn account to automatically capture leads from your B2B ad campaign Lead Gen Forms using a secure OAuth flow.",
         logo: <LinkedInLogo />,
     },
     {
